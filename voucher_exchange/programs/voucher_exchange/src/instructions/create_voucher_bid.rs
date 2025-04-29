@@ -5,16 +5,17 @@ use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
-#[instruction(price: u64, bid_id: u64, escrow_bump: u8)]
+#[instruction(price: u64, escrow_bump: u8)]
 pub struct CreateVoucherBid<'info> {
     #[account(
         init_if_needed,
         payer = bidder,
-        space = 8 + 32 + 32 + 8 + 32 + 32 + 1 + 1 + 8 + 32 + 1 + 1,
+        space = VoucherBid::SIZE,
         seeds = [
         VOUCHER_BID_SEED,
         exchange.key().as_ref(),
-        &bid_id.to_le_bytes()
+        bidder.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump
     )]
@@ -55,7 +56,8 @@ pub struct CreateVoucherBid<'info> {
         seeds = [
         ESCROW_SEED,
         exchange.key().as_ref(),
-        &bid_id.to_le_bytes()
+        bidder.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump,
         token::mint = payment_mint,
@@ -71,7 +73,6 @@ pub struct CreateVoucherBid<'info> {
 pub fn handler(
     ctx: Context<CreateVoucherBid>,
     price: u64,
-    bid_id: u64,
     escrow_bump: u8,
 ) -> Result<()> {
     // Check price is valid
@@ -109,10 +110,11 @@ pub fn handler(
     bid.escrow_account = ctx.accounts.escrow_account.key();
     bid.active = true;
     bid.requires_refund = false;  // Initially doesn't require refund
-    bid.bid_id = bid_id;
     bid.exchange = ctx.accounts.exchange.key();
     bid.bump = ctx.bumps.bid;
     bid.escrow_bump = escrow_bump;
+
+    // Note: Removed bid_id field since we're now using bidder and nft_mint for PDA derivation
 
     // Increment total bids
     let exchange = &mut ctx.accounts.exchange;

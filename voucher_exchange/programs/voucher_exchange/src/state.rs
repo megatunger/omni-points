@@ -30,8 +30,6 @@ pub struct VoucherListing {
     pub payment_mint: Pubkey,
     // Whether the listing is active
     pub active: bool,
-    // Unique listing ID
-    pub listing_id: u64,
     // Reference to parent exchange
     pub exchange: Pubkey,
     // Bump for PDA derivation
@@ -54,8 +52,6 @@ pub struct VoucherBid {
     pub active: bool,
     // Whether the bid needs to be refunded
     pub requires_refund: bool,
-    // Unique bid ID
-    pub bid_id: u64,
     // Reference to parent exchange
     pub exchange: Pubkey,
     // Bump for PDA derivation
@@ -76,4 +72,49 @@ pub struct VoucherState {
     pub exchange: Pubkey,
     // Bump for PDA derivation
     pub bump: u8,
+}
+
+impl VoucherExchange {
+    pub const SIZE: usize = 8 +      // discriminator
+        32 +                         // authority
+        2 +                          // fee_basis_points
+        32 +                         // fee_account
+        8 +                          // total_listings
+        8 +                          // total_bids
+        1;                           // bump
+}
+
+impl VoucherListing {
+    pub const SIZE: usize = 8 +      // discriminator
+        32 +                         // owner
+        32 +                         // nft_mint
+        32 +                         // nft_account
+        8 +                          // price
+        32 +                         // payment_mint
+        1 +                          // active
+        32 +                         // exchange
+        1;                           // bump
+}
+
+impl VoucherBid {
+    pub const SIZE: usize = 8 +      // discriminator
+        32 +                         // bidder
+        32 +                         // nft_mint
+        8 +                          // price
+        32 +                         // payment_mint
+        32 +                         // escrow_account
+        1 +                          // active
+        1 +                          // requires_refund
+        32 +                         // exchange
+        1 +                          // bump
+        1;                           // escrow_bump
+}
+
+impl VoucherState {
+    pub const SIZE: usize = 8 +      // discriminator
+        32 +                         // nft_mint
+        1 +                          // sold
+        8 +                          // latest_sale_timestamp
+        32 +                         // exchange
+        1;                           // bump
 }

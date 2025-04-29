@@ -5,16 +5,17 @@ use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
-#[instruction(price: u64, listing_id: u64)]
+#[instruction(price: u64)]
 pub struct CreateVoucherListing<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + 32 + 32 + 32 + 8 + 32 + 1 + 8 + 32 + 1,
+        space = VoucherListing::SIZE,
         seeds = [
         VOUCHER_LISTING_SEED,
         exchange.key().as_ref(),
-        &listing_id.to_le_bytes()
+        owner.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump
     )]
@@ -45,7 +46,6 @@ pub struct CreateVoucherListing<'info> {
 pub fn handler(
     ctx: Context<CreateVoucherListing>,
     price: u64,
-    listing_id: u64,
 ) -> Result<()> {
     // Check price is valid
     require!(price > 0, VoucherExchangeError::InvalidPrice);
@@ -64,9 +64,10 @@ pub fn handler(
     listing.price = price;
     listing.payment_mint = ctx.accounts.payment_mint.key();
     listing.active = true;
-    listing.listing_id = listing_id;
     listing.exchange = ctx.accounts.exchange.key();
     listing.bump = ctx.bumps.listing;
+
+    // Note: Removed listing_id field since we're now using owner and nft_mint for PDA derivation
 
     // Increment total listings
     let exchange = &mut ctx.accounts.exchange;

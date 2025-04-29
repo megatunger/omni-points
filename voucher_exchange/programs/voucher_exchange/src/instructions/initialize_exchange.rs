@@ -9,7 +9,7 @@ pub struct InitializeExchange<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 2 + 32 + 8 + 8 + 1,
+        space = VoucherExchange::SIZE,
         seeds = [EXCHANGE_SEED],
         bump
     )]
