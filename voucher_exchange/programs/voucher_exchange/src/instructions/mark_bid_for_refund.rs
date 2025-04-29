@@ -5,7 +5,6 @@ use crate::constants::*;
 use anchor_spl::token::Mint;
 
 #[derive(Accounts)]
-#[instruction(bid_id: u64)]
 pub struct MarkBidForRefund<'info> {
     #[account(mut)]
     pub exchange: Account<'info, VoucherExchange>,
@@ -28,12 +27,17 @@ pub struct MarkBidForRefund<'info> {
 
     pub nft_mint: Account<'info, Mint>,
 
+    // Include bidder's public key for PDA derivation
+    /// CHECK: Only used for address derivation
+    pub bidder: UncheckedAccount<'info>,
+
     #[account(
         mut,
         seeds = [
         VOUCHER_BID_SEED,
         exchange.key().as_ref(),
-        &bid_id.to_le_bytes()
+        bidder.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump = bid.bump,
         constraint = bid.nft_mint == nft_mint.key() @ VoucherExchangeError::NotBidder,
@@ -46,13 +50,16 @@ pub struct MarkBidForRefund<'info> {
 
 pub fn handler(
     ctx: Context<MarkBidForRefund>,
-    bid_id: u64
 ) -> Result<()> {
     // Ensure we have a valid NFT state that's already been sold
     require!(ctx.accounts.nft_state.sold, VoucherExchangeError::NFTAlreadySold);
 
-    // Log which bid we're marking for refund
-    msg!("Marking bid ID {} for refund", bid_id);
+    // Log which bid we're marking for refund (using bidder address and NFT mint for identification)
+    msg!(
+        "Marking bid from bidder {} for NFT {} for refund",
+        ctx.accounts.bidder.key(),
+        ctx.accounts.nft_mint.key()
+    );
 
     // Check that this bid is not already marked for refund
     require!(!ctx.accounts.bid.requires_refund, VoucherExchangeError::BidNotRequiresRefund);
@@ -61,7 +68,11 @@ pub fn handler(
     let bid = &mut ctx.accounts.bid;
     bid.requires_refund = true;
 
-    msg!("Successfully marked bid ID {} for refund", bid_id);
+    msg!(
+        "Successfully marked bid from bidder {} for NFT {} for refund",
+        ctx.accounts.bidder.key(),
+        ctx.accounts.nft_mint.key()
+    );
 
     Ok(())
 }

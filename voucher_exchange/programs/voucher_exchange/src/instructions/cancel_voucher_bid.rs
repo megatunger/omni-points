@@ -5,14 +5,14 @@ use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
-#[instruction(bid_id: u64)]
 pub struct CancelVoucherBid<'info> {
     #[account(
         mut,
         seeds = [
         VOUCHER_BID_SEED,
         exchange.key().as_ref(),
-        &bid_id.to_le_bytes()
+        bidder.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump = bid.bump,
         constraint = bid.bidder == bidder.key() @ VoucherExchangeError::NotBidder
@@ -24,12 +24,16 @@ pub struct CancelVoucherBid<'info> {
     #[account(mut)]
     pub bidder: Signer<'info>,
 
+    // Added nft_mint account for PDA derivation
+    pub nft_mint: Account<'info, Mint>,
+
     #[account(
         mut,
         seeds = [
         ESCROW_SEED,
         exchange.key().as_ref(),
-        &bid_id.to_le_bytes()
+        bidder.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump = bid.escrow_bump
     )]
@@ -50,7 +54,6 @@ pub struct CancelVoucherBid<'info> {
 
 pub fn handler(
     ctx: Context<CancelVoucherBid>,
-    _bid_id: u64,
 ) -> Result<()> {
     // Check bid is active
     require!(ctx.accounts.bid.active, VoucherExchangeError::BidNotActive);
@@ -58,14 +61,16 @@ pub fn handler(
     // Refund from escrow - set up seeds with proper lifetimes
     let escrow_seed = ESCROW_SEED;
     let exchange_key = ctx.accounts.exchange.key();
-    let bid_id_bytes = ctx.accounts.bid.bid_id.to_le_bytes();
+    let bidder_key = ctx.accounts.bidder.key();
+    let nft_mint_key = ctx.accounts.nft_mint.key();
     let escrow_bump = ctx.accounts.bid.escrow_bump;
 
     // Create the seeds array with the correct lifetime
     let escrow_seeds = &[
         escrow_seed,
         exchange_key.as_ref(),
-        &bid_id_bytes,
+        bidder_key.as_ref(),
+        nft_mint_key.as_ref(),
         &[escrow_bump],
     ];
 

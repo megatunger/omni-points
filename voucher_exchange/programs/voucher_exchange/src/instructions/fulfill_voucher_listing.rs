@@ -6,14 +6,14 @@ use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
-#[instruction(listing_id: u64)]
 pub struct FulfillVoucherListing<'info> {
     #[account(
         mut,
         seeds = [
         VOUCHER_LISTING_SEED,
         exchange.key().as_ref(),
-        &listing_id.to_le_bytes()
+        owner.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump = listing.bump,
         constraint = listing.active == true @ VoucherExchangeError::ListingNotActive
@@ -37,7 +37,7 @@ pub struct FulfillVoucherListing<'info> {
     #[account(
         init_if_needed,
         payer = buyer,
-        space = 8 + 32 + 1 + 8 + 32 + 1,
+        space = VoucherState::SIZE,
         seeds = [
         VOUCHER_STATE_SEED,
         exchange.key().as_ref(),
@@ -97,7 +97,6 @@ pub struct FulfillVoucherListing<'info> {
 
 pub fn handler(
     ctx: Context<FulfillVoucherListing>,
-    listing_id: u64,
 ) -> Result<()> {
     // Check balance
     let price = ctx.accounts.listing.price;
@@ -149,13 +148,15 @@ pub fn handler(
 
     // 3. Transfer NFT to buyer
     let exchange_key = ctx.accounts.exchange.key();
-    let listing_id_bytes = ctx.accounts.listing.listing_id.to_le_bytes();
+    let owner_key = ctx.accounts.owner.key();
+    let nft_mint_key = ctx.accounts.nft_mint.key();
     let bump = ctx.accounts.listing.bump;
 
     let listing_seeds = &[
         VOUCHER_LISTING_SEED,
         exchange_key.as_ref(),
-        &listing_id_bytes,
+        owner_key.as_ref(),
+        nft_mint_key.as_ref(),
         &[bump],
     ];
 

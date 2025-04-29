@@ -47,9 +47,7 @@ describe("voucher_exchange", () => {
     let bidderPaymentAccount: PublicKey;
 
     // Listing and bid parameters
-    const listingId = new BN(1);
     const listingPrice = new BN(500_000_000);
-    const bidId = new BN(1);
     const bidPrice = new BN(400_000_000);
     let listingPDA: PublicKey;
     let listingBump: number;
@@ -179,7 +177,8 @@ describe("voucher_exchange", () => {
             [
                 Buffer.from("voucher_listing"),
                 exchangePDA.toBuffer(),
-                listingId.toArrayLike(Buffer, "le", 8),
+                nftOwner.publicKey.toBuffer(),
+                nftMint.toBuffer(),
             ],
             program.programId
         );
@@ -188,7 +187,8 @@ describe("voucher_exchange", () => {
             [
                 Buffer.from("voucher_bid"),
                 exchangePDA.toBuffer(),
-                bidId.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint.toBuffer(),
             ],
             program.programId
         );
@@ -197,7 +197,8 @@ describe("voucher_exchange", () => {
             [
                 Buffer.from("escrow"),
                 exchangePDA.toBuffer(),
-                bidId.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint.toBuffer(),
             ],
             program.programId
         );
@@ -240,7 +241,7 @@ describe("voucher_exchange", () => {
     it("Create Voucher Listing", async () => {
         // Create a voucher listing
         const tx = await program.methods
-            .createVoucherListing(listingPrice, listingId)
+            .createVoucherListing(listingPrice)
             .accounts({
                 listing: listingPDA,
                 exchange: exchangePDA,
@@ -265,7 +266,6 @@ describe("voucher_exchange", () => {
         assert.equal(listingAccount.price.toString(), listingPrice.toString());
         assert.equal(listingAccount.paymentMint.toString(), paymentMint.toString());
         assert.equal(listingAccount.active, true);
-        assert.equal(listingAccount.listingId.toString(), listingId.toString());
         assert.equal(listingAccount.exchange.toString(), exchangePDA.toString());
 
         // Verify exchange counter was incremented
@@ -276,7 +276,7 @@ describe("voucher_exchange", () => {
     it("Create Voucher Bid", async () => {
         // Create a bid on the voucher
         const tx = await program.methods
-            .createVoucherBid(bidPrice, bidId, escrowBump)
+            .createVoucherBid(bidPrice, escrowBump)
             .accounts({
                 bid: bidPDA,
                 exchange: exchangePDA,
@@ -304,7 +304,6 @@ describe("voucher_exchange", () => {
         assert.equal(bidAccount.escrowAccount.toString(), escrowPDA.toString());
         assert.equal(bidAccount.active, true);
         assert.equal(bidAccount.requiresRefund, false);
-        assert.equal(bidAccount.bidId.toString(), bidId.toString());
         assert.equal(bidAccount.exchange.toString(), exchangePDA.toString());
 
         // Verify funds were moved to escrow
@@ -319,7 +318,7 @@ describe("voucher_exchange", () => {
     it("Accept Voucher Bid", async () => {
         // Accept the bid
         const tx = await program.methods
-            .acceptVoucherBid(bidId)
+            .acceptVoucherBid()
             .accounts({
                 bid: bidPDA,
                 exchange: exchangePDA,
@@ -416,22 +415,22 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
-        // Create a new listing with a different ID
-        const listingId2 = new BN(2);
+        // Create a new listing with a different NFT
         const listingPrice2 = new BN(600_000_000);
 
         const [listingPDA2] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_listing"),
                 exchangePDA.toBuffer(),
-                listingId2.toArrayLike(Buffer, "le", 8),
+                nftOwner.publicKey.toBuffer(),
+                nftMint2.toBuffer(),
             ],
             program.programId
         );
 
         // Create the second listing
         const createTx = await program.methods
-            .createVoucherListing(listingPrice2, listingId2)
+            .createVoucherListing(listingPrice2)
             .accounts({
                 listing: listingPDA2,
                 exchange: exchangePDA,
@@ -450,7 +449,7 @@ describe("voucher_exchange", () => {
 
         // Buyer fulfills the listing
         const fulfillTx = await program.methods
-            .fulfillVoucherListing(listingId2)
+            .fulfillVoucherListing()
             .accounts({
                 listing: listingPDA2,
                 exchange: exchangePDA,
@@ -531,21 +530,21 @@ describe("voucher_exchange", () => {
         );
 
         // Create a new listing to cancel
-        const listingId3 = new BN(3);
         const listingPrice3 = new BN(700_000_000);
 
         const [listingPDA3] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_listing"),
                 exchangePDA.toBuffer(),
-                listingId3.toArrayLike(Buffer, "le", 8),
+                nftOwner.publicKey.toBuffer(),
+                nftMint3.toBuffer(),
             ],
             program.programId
         );
 
         // Create the listing
         const createTx = await program.methods
-            .createVoucherListing(listingPrice3, listingId3)
+            .createVoucherListing(listingPrice3)
             .accounts({
                 listing: listingPDA3,
                 exchange: exchangePDA,
@@ -564,11 +563,12 @@ describe("voucher_exchange", () => {
 
         // Cancel the listing
         const cancelTx = await program.methods
-            .cancelVoucherListing(listingId3)
+            .cancelVoucherListing()
             .accounts({
                 listing: listingPDA3,
                 exchange: exchangePDA,
                 owner: nftOwner.publicKey,
+                nftMint: nftMint3,
                 systemProgram: SystemProgram.programId,
             })
             .signers([nftOwner])
@@ -610,14 +610,14 @@ describe("voucher_exchange", () => {
         );
 
         // Create another bid
-        const bidId2 = new BN(2);
         const bidPrice2 = new BN(450_000_000);
 
         const [bidPDA2, bidBump2] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_bid"),
                 exchangePDA.toBuffer(),
-                bidId2.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint4.toBuffer(),
             ],
             program.programId
         );
@@ -626,14 +626,15 @@ describe("voucher_exchange", () => {
             [
                 Buffer.from("escrow"),
                 exchangePDA.toBuffer(),
-                bidId2.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint4.toBuffer(),
             ],
             program.programId
         );
 
         // Create the bid
         const createBidTx = await program.methods
-            .createVoucherBid(bidPrice2, bidId2, escrowBump2)
+            .createVoucherBid(bidPrice2, escrowBump2)
             .accounts({
                 bid: bidPDA2,
                 exchange: exchangePDA,
@@ -661,11 +662,12 @@ describe("voucher_exchange", () => {
 
         // Cancel the bid
         const cancelBidTx = await program.methods
-            .cancelVoucherBid(bidId2)
+            .cancelVoucherBid()
             .accounts({
                 bid: bidPDA2,
                 exchange: exchangePDA,
                 bidder: bidder.publicKey,
+                nftMint: nftMint4,
                 escrowAccount: escrowPDA2,
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
@@ -734,21 +736,21 @@ describe("voucher_exchange", () => {
         );
 
         // First create a listing for this NFT
-        const listingId5 = new BN(5);
         const listingPrice5 = new BN(500_000_000);
 
         const [listingPDA5] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_listing"),
                 exchangePDA.toBuffer(),
-                listingId5.toArrayLike(Buffer, "le", 8),
+                nftOwner.publicKey.toBuffer(),
+                nftMint5.toBuffer(),
             ],
             program.programId
         );
 
         // Create the listing
         await program.methods
-            .createVoucherListing(listingPrice5, listingId5)
+            .createVoucherListing(listingPrice5)
             .accounts({
                 listing: listingPDA5,
                 exchange: exchangePDA,
@@ -764,14 +766,14 @@ describe("voucher_exchange", () => {
             .rpc();
 
         // Create another bid for refund testing
-        const bidId3 = new BN(3);
         const bidPrice3 = new BN(350_000_000);
 
         const [bidPDA3, bidBump3] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_bid"),
                 exchangePDA.toBuffer(),
-                bidId3.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint5.toBuffer(),
             ],
             program.programId
         );
@@ -780,14 +782,15 @@ describe("voucher_exchange", () => {
             [
                 Buffer.from("escrow"),
                 exchangePDA.toBuffer(),
-                bidId3.toArrayLike(Buffer, "le", 8),
+                bidder.publicKey.toBuffer(),
+                nftMint5.toBuffer(),
             ],
             program.programId
         );
 
         // Create the bid
         const createBidTx = await program.methods
-            .createVoucherBid(bidPrice3, bidId3, escrowBump3)
+            .createVoucherBid(bidPrice3, escrowBump3)
             .accounts({
                 bid: bidPDA3,
                 exchange: exchangePDA,
@@ -808,7 +811,7 @@ describe("voucher_exchange", () => {
 
         // Now fulfill the listing to create the NFT state as "sold"
         await program.methods
-            .fulfillVoucherListing(listingId5)
+            .fulfillVoucherListing()
             .accounts({
                 listing: listingPDA5,
                 exchange: exchangePDA,
@@ -833,12 +836,13 @@ describe("voucher_exchange", () => {
 
         // Mark the bid for refund
         const markBidTx = await program.methods
-            .markBidForRefund(bidId3)
+            .markBidForRefund()
             .accounts({
                 exchange: exchangePDA,
                 authority: admin.publicKey,
                 nftState: nftStatePDA5,
                 nftMint: nftMint5,
+                bidder: bidder.publicKey, // Added bidder account for PDA derivation
                 bid: bidPDA3,
                 systemProgram: SystemProgram.programId,
             })
@@ -853,18 +857,19 @@ describe("voucher_exchange", () => {
 
         // Refund the bid
         const refundBidTx = await program.methods
-            .refundBid(bidId3)
+            .refundBid()
             .accounts({
                 bid: bidPDA3,
                 exchange: exchangePDA,
-                refunder: admin.publicKey, // Anyone can be the refunder
+                bidder: bidder.publicKey, // The bidder needs to sign for the refund now
+                nftMint: nftMint5, // Added nftMint for PDA derivation
                 escrowAccount: escrowPDA3,
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
             })
-            .signers([admin])
+            .signers([bidder]) // Bidder needs to sign, not admin
             .rpc();
 
         console.log("Refund bid transaction:", refundBidTx);

@@ -4,14 +4,14 @@ use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
-#[instruction(listing_id: u64)]
 pub struct CancelVoucherListing<'info> {
     #[account(
         mut,
         seeds = [
         VOUCHER_LISTING_SEED,
         exchange.key().as_ref(),
-        &listing_id.to_le_bytes()
+        owner.key().as_ref(),
+        nft_mint.key().as_ref()
         ],
         bump = listing.bump,
         constraint = listing.owner == owner.key() @ VoucherExchangeError::NotListingOwner
@@ -23,12 +23,15 @@ pub struct CancelVoucherListing<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
+    // Added nft_mint account for PDA derivation
+    /// CHECK: Only used for address derivation
+    pub nft_mint: AccountInfo<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
 pub fn handler(
     ctx: Context<CancelVoucherListing>,
-    _listing_id: u64,
 ) -> Result<()> {
     // Mark listing as inactive
     ctx.accounts.listing.active = false;

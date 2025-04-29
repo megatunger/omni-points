@@ -29,7 +29,6 @@
 
 **Parameters**:
 - `price`: Asking price for the voucher
-- `listing_id`: Unique identifier for the listing
 
 **Validation Logic**:
 - Price must be greater than zero
@@ -55,7 +54,6 @@
 
 **Parameters**:
 - `price`: Bid amount
-- `bid_id`: Unique identifier for the bid
 - `escrow_bump`: Bump seed for escrow PDA
 
 **Validation Logic**:
@@ -81,9 +79,6 @@
 
 **Purpose**: Allows sellers to accept a bid and complete the transaction
 
-**Parameters**:
-- `bid_id`: ID of the bid being accepted
-
 **Validation Logic**:
 - Bid must be active
 - Seller must own the NFT
@@ -108,9 +103,6 @@
 ### 5. `fulfill_voucher_listing`
 
 **Purpose**: Allows direct purchase of a listed NFT at the asking price
-
-**Parameters**:
-- `listing_id`: ID of the listing being purchased
 
 **Validation Logic**:
 - Listing must be active
@@ -138,9 +130,6 @@
 
 **Purpose**: Allows sellers to remove their NFT from the marketplace
 
-**Parameters**:
-- `listing_id`: ID of the listing to cancel
-
 **Validation Logic**:
 - Only the original lister (owner) can cancel
 - Listing must exist
@@ -155,9 +144,6 @@
 ### 7. `cancel_voucher_bid`
 
 **Purpose**: Allows bidders to withdraw their bid and reclaim funds
-
-**Parameters**:
-- `bid_id`: ID of the bid to cancel
 
 **Validation Logic**:
 - Only the original bidder can cancel
@@ -176,9 +162,6 @@
 
 **Purpose**: Flags bids for refund when an NFT has been sold through other means
 
-**Parameters**:
-- `bid_ids`: Single or multiple bid IDs to mark for refund
-
 **Validation Logic**:
 - Only exchange authority can mark bids for refund
 - Bids must be for an NFT that's been sold
@@ -194,9 +177,6 @@
 ### 9. `refund_bid`
 
 **Purpose**: Processes the actual refund for a previously marked bid
-
-**Parameters**:
-- `bid_id`: ID of the bid to refund
 
 **Validation Logic**:
 - Bid must be flagged as requiring refund
@@ -238,4 +218,4 @@
     - Multiple bids exist for an NFT
     - NFT is sold through one bid or direct purchase
     - Exchange authority marks other bids for refund (`mark_bid_for_refund`)
-    - Bidders or admin calls refund for each bid (`refund_bid`)
+    - Bidders calls refund for each bid (`refund_bid`)
