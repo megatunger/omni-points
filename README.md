@@ -1,5 +1,23 @@
 # template-next-tailwind-basic
 
+## Environment
+```bash
+export OMNI_POINTS_PASSWORD=
+```
+
+### Encode
+```bash
+./encrypt.sh
+```
+
+## Decode
+```bash
+./decrypt.sh
+```
+
+
+
+
 ## Getting Started
 
 ### Prerequisites
