@@ -2,22 +2,21 @@ use anchor_lang::prelude::*;
 use crate::state::*;
 use crate::errors::*;
 use crate::constants::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token_interface::{Mint};
 
 #[derive(Accounts)]
 pub struct MarkBidForRefund<'info> {
+    #[account(
+        constraint = authority.key() == exchange.authority.key() @ VoucherExchangeError::NotExchangeAuthority,
+    )]
+    pub authority: Signer<'info>,
+
     #[account(mut)]
     pub exchange: Account<'info, VoucherExchange>,
 
     #[account(
-        constraint = authority.key() == exchange.authority @ VoucherExchangeError::NotExchangeAuthority,
-    )]
-    pub authority: Signer<'info>,
-
-    #[account(
         seeds = [
         VOUCHER_STATE_SEED,
-        exchange.key().as_ref(),
         nft_mint.key().as_ref()
         ],
         bump = nft_state.bump,
@@ -25,7 +24,7 @@ pub struct MarkBidForRefund<'info> {
     )]
     pub nft_state: Account<'info, VoucherState>,
 
-    pub nft_mint: Account<'info, Mint>,
+    pub nft_mint: InterfaceAccount<'info, Mint>,
 
     // Include bidder's public key for PDA derivation
     /// CHECK: Only used for address derivation
@@ -35,7 +34,6 @@ pub struct MarkBidForRefund<'info> {
         mut,
         seeds = [
         VOUCHER_BID_SEED,
-        exchange.key().as_ref(),
         bidder.key().as_ref(),
         nft_mint.key().as_ref()
         ],

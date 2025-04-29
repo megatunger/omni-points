@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer};
+use anchor_spl::token_interface::{
+    TokenAccount, Mint, TokenInterface,
+    TransferChecked, transfer_checked
+};
 use anchor_spl::associated_token::AssociatedToken;
 use crate::state::*;
 use crate::errors::*;
@@ -11,27 +14,23 @@ pub struct AcceptVoucherBid<'info> {
         mut,
         seeds = [
         VOUCHER_BID_SEED,
-        exchange.key().as_ref(),
         bidder.key().as_ref(),
         nft_mint.key().as_ref()
         ],
         bump = bid.bump,
-        constraint = bid.active == true @ VoucherExchangeError::BidNotActive,
-        constraint = bid.nft_mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner
+        constraint = bid.active == true @ VoucherExchangeError::BidNotActive
     )]
     pub bid: Account<'info, VoucherBid>,
 
     #[account(mut)]
-    pub exchange: Account<'info, VoucherExchange>,
-
-    #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: Case where bid.bidder doesn't sign
-    #[account(constraint = bidder.key() == bid.bidder @ VoucherExchangeError::NotBidder)]
+    /// CHECK: Account of the bidder (used for PDA derivation)
+    #[account(mut, constraint = bidder.key() == bid.bidder @ VoucherExchangeError::NotBidder)]
     pub bidder: AccountInfo<'info>,
 
-    pub nft_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub nft_mint: InterfaceAccount<'info, Mint>,
 
     // Create or update NFT state
     #[account(
@@ -40,7 +39,6 @@ pub struct AcceptVoucherBid<'info> {
         space = VoucherState::SIZE,
         seeds = [
         VOUCHER_STATE_SEED,
-        exchange.key().as_ref(),
         nft_mint.key().as_ref()
         ],
         bump
@@ -52,7 +50,7 @@ pub struct AcceptVoucherBid<'info> {
         constraint = owner_nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
         constraint = owner_nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner
     )]
-    pub owner_nft_account: Account<'info, TokenAccount>,
+    pub owner_nft_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
@@ -60,21 +58,17 @@ pub struct AcceptVoucherBid<'info> {
         associated_token::mint = nft_mint,
         associated_token::authority = bidder
     )]
-    pub bidder_nft_account: Account<'info, TokenAccount>,
+    pub bidder_nft_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub payment_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub payment_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
-        seeds = [
-        ESCROW_SEED,
-        exchange.key().as_ref(),
-        bidder.key().as_ref(),
-        nft_mint.key().as_ref()
-        ],
-        bump = bid.escrow_bump
+        constraint = escrow_account.key() == bid.escrow_account @ VoucherExchangeError::InvalidBidState,
+        constraint = escrow_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice
     )]
-    pub escrow_account: Account<'info, TokenAccount>,
+    pub escrow_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
@@ -82,16 +76,9 @@ pub struct AcceptVoucherBid<'info> {
         associated_token::mint = payment_mint,
         associated_token::authority = owner
     )]
-    pub owner_payment_account: Account<'info, TokenAccount>,
+    pub owner_payment_account: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-        mut,
-        constraint = fee_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice,
-        constraint = fee_account.key() == exchange.fee_account @ VoucherExchangeError::NotExchangeAuthority
-    )]
-    pub fee_account: Account<'info, TokenAccount>,
-
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -107,84 +94,65 @@ pub fn handler(
         VoucherExchangeError::InsufficientNFTAmount
     );
 
-    // Get price and calculate fee
+    // Calculate fee
     let price = ctx.accounts.bid.price;
-    let fee_basis_points = ctx.accounts.exchange.fee_basis_points as u64;
-    let fee_amount = price
-        .checked_mul(fee_basis_points as u64)
-        .unwrap()
-        .checked_div(BASIS_POINTS_DIVISOR as u64)
-        .unwrap();
-    let seller_amount = price.checked_sub(fee_amount).unwrap();
+    let seller_amount = price;
 
-    // 1. Transfer NFT to bidder
-    let nft_transfer_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.owner_nft_account.to_account_info(),
-            to: ctx.accounts.bidder_nft_account.to_account_info(),
-            authority: ctx.accounts.owner.to_account_info(),
-        },
-    );
-
-    token::transfer(nft_transfer_ctx, 1)?;
-
-    // 2. Create the escrow seeds with proper lifetimes
-    let escrow_seed = ESCROW_SEED;
-    let exchange_key = ctx.accounts.exchange.key();
+    // Get escrow seeds
     let bidder_key = ctx.accounts.bidder.key();
     let nft_mint_key = ctx.accounts.nft_mint.key();
     let escrow_bump = ctx.accounts.bid.escrow_bump;
 
-    // Create the seeds array with the correct lifetime
     let escrow_seeds = &[
-        escrow_seed,
-        exchange_key.as_ref(),
+        ESCROW_SEED,
+        // Removed exchange_key.as_ref(),
         bidder_key.as_ref(),
         nft_mint_key.as_ref(),
         &[escrow_bump],
     ];
 
-    // Create a reference to the seeds array with the right structure for CPI
     let signer_seeds = &[&escrow_seeds[..]];
 
-    // Transfer payment to seller
-    let seller_payment_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.escrow_account.to_account_info(),
-            to: ctx.accounts.owner_payment_account.to_account_info(),
-            authority: ctx.accounts.escrow_account.to_account_info(),
-        },
-        signer_seeds,
-    );
-
-    token::transfer(seller_payment_ctx, seller_amount)?;
-
-    // 3. Transfer fee to exchange
-    if fee_amount > 0 {
-        let fee_payment_ctx = CpiContext::new_with_signer(
+    // 1. Transfer payment from escrow to seller
+    transfer_checked(
+        CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            TransferChecked {
                 from: ctx.accounts.escrow_account.to_account_info(),
-                to: ctx.accounts.fee_account.to_account_info(),
+                mint: ctx.accounts.payment_mint.to_account_info(),
+                to: ctx.accounts.owner_payment_account.to_account_info(),
                 authority: ctx.accounts.escrow_account.to_account_info(),
             },
-            signer_seeds,  // Reuse the same signer_seeds from before
-        );
+            signer_seeds,
+        ),
+        seller_amount,
+        ctx.accounts.payment_mint.decimals,
+    )?;
 
-        token::transfer(fee_payment_ctx, fee_amount)?;
-    }
+
+    // 3. Transfer NFT from seller to bidder
+    transfer_checked(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.owner_nft_account.to_account_info(),
+                mint: ctx.accounts.nft_mint.to_account_info(),
+                to: ctx.accounts.bidder_nft_account.to_account_info(),
+                authority: ctx.accounts.owner.to_account_info(),
+            },
+        ),
+        1,
+        ctx.accounts.nft_mint.decimals,
+    )?;
 
     // Mark bid as inactive
     ctx.accounts.bid.active = false;
 
-    // Update or create NFT state to mark NFT as sold
+    // Update NFT state to mark as sold
     let nft_state = &mut ctx.accounts.nft_state;
     nft_state.nft_mint = ctx.accounts.nft_mint.key();
     nft_state.sold = true;
     nft_state.latest_sale_timestamp = Clock::get()?.unix_timestamp;
-    nft_state.exchange = ctx.accounts.exchange.key();
     nft_state.bump = ctx.bumps.nft_state;
 
     Ok(())

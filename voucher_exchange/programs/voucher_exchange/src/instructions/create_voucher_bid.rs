@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer};
+use anchor_spl::token_interface::{
+    TokenAccount, Mint, TokenInterface,
+    TransferChecked
+};
 use crate::state::*;
 use crate::errors::*;
 use crate::constants::*;
@@ -13,7 +16,6 @@ pub struct CreateVoucherBid<'info> {
         space = VoucherBid::SIZE,
         seeds = [
         VOUCHER_BID_SEED,
-        exchange.key().as_ref(),
         bidder.key().as_ref(),
         nft_mint.key().as_ref()
         ],
@@ -27,13 +29,12 @@ pub struct CreateVoucherBid<'info> {
     #[account(mut)]
     pub bidder: Signer<'info>,
 
-    pub nft_mint: Account<'info, Mint>,
+    pub nft_mint: InterfaceAccount<'info, Mint>,
 
     // NFT state is optional (might not exist yet)
     #[account(
         seeds = [
         VOUCHER_STATE_SEED,
-        exchange.key().as_ref(),
         nft_mint.key().as_ref()
         ],
         bump,
@@ -41,21 +42,20 @@ pub struct CreateVoucherBid<'info> {
     )]
     pub nft_state: Option<Account<'info, VoucherState>>,
 
-    pub payment_mint: Account<'info, Mint>,
+    pub payment_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = bidder_token_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice,
         constraint = bidder_token_account.owner == bidder.key() @ VoucherExchangeError::NotBidder
     )]
-    pub bidder_token_account: Account<'info, TokenAccount>,
+    pub bidder_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
         payer = bidder,
         seeds = [
         ESCROW_SEED,
-        exchange.key().as_ref(),
         bidder.key().as_ref(),
         nft_mint.key().as_ref()
         ],
@@ -63,9 +63,9 @@ pub struct CreateVoucherBid<'info> {
         token::mint = payment_mint,
         token::authority = escrow_account
     )]
-    pub escrow_account: Account<'info, TokenAccount>,
+    pub escrow_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -89,17 +89,20 @@ pub fn handler(
         require!(!nft_state.sold, VoucherExchangeError::NFTAlreadySold);
     }
 
-    // Transfer token to escrow
-    let transfer_to_escrow_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.bidder_token_account.to_account_info(),
-            to: ctx.accounts.escrow_account.to_account_info(),
-            authority: ctx.accounts.bidder.to_account_info(),
-        },
-    );
-
-    token::transfer(transfer_to_escrow_ctx, price)?;
+    // Transfer token to escrow using transfer_checked
+    anchor_spl::token_interface::transfer_checked(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.bidder_token_account.to_account_info(),
+                mint: ctx.accounts.payment_mint.to_account_info(),
+                to: ctx.accounts.escrow_account.to_account_info(),
+                authority: ctx.accounts.bidder.to_account_info(),
+            },
+        ),
+        price,
+        ctx.accounts.payment_mint.decimals,
+    )?;
 
     // Create new bid
     let bid = &mut ctx.accounts.bid;
@@ -110,11 +113,8 @@ pub fn handler(
     bid.escrow_account = ctx.accounts.escrow_account.key();
     bid.active = true;
     bid.requires_refund = false;  // Initially doesn't require refund
-    bid.exchange = ctx.accounts.exchange.key();
     bid.bump = ctx.bumps.bid;
     bid.escrow_bump = escrow_bump;
-
-    // Note: Removed bid_id field since we're now using bidder and nft_mint for PDA derivation
 
     // Increment total bids
     let exchange = &mut ctx.accounts.exchange;

@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount, Mint};
+use anchor_spl::token_interface::{
+    TokenAccount, Mint, TokenInterface
+};
 use crate::state::*;
 use crate::errors::*;
 use crate::constants::*;
@@ -13,7 +15,7 @@ pub struct CreateVoucherListing<'info> {
         space = VoucherListing::SIZE,
         seeds = [
         VOUCHER_LISTING_SEED,
-        exchange.key().as_ref(),
+        // Removed exchange.key().as_ref(),
         owner.key().as_ref(),
         nft_mint.key().as_ref()
         ],
@@ -27,18 +29,22 @@ pub struct CreateVoucherListing<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    pub nft_mint: Account<'info, Mint>,
+    // Use TokenInterface::Mint instead of Mint
+    pub nft_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
         constraint = nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner
     )]
-    pub nft_account: Account<'info, TokenAccount>,
+    // Use TokenInterface::TokenAccount instead of TokenAccount
+    pub nft_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub payment_mint: Account<'info, Mint>,
+    // Same for payment mint
+    pub payment_mint: InterfaceAccount<'info, Mint>,
 
-    pub token_program: Program<'info, Token>,
+    // Use TokenInterface instead of Token
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -64,25 +70,25 @@ pub fn handler(
     listing.price = price;
     listing.payment_mint = ctx.accounts.payment_mint.key();
     listing.active = true;
-    listing.exchange = ctx.accounts.exchange.key();
     listing.bump = ctx.bumps.listing;
 
-    // Note: Removed listing_id field since we're now using owner and nft_mint for PDA derivation
+    // Approve authority delegation to listing PDA
+    // Use TokenInterface approve instead of token::approve
+    anchor_spl::token_interface::approve(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            anchor_spl::token_interface::Approve {
+                to: ctx.accounts.nft_account.to_account_info(),
+                delegate: listing.to_account_info(),
+                authority: ctx.accounts.owner.to_account_info(),
+            },
+        ),
+        1, // Approve amount of 1 for NFT
+    )?;
 
     // Increment total listings
     let exchange = &mut ctx.accounts.exchange;
     exchange.total_listings = exchange.total_listings.checked_add(1).unwrap();
-
-    // Approve the listing PDA to transfer the NFT on behalf of the owner
-    let approve_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        anchor_spl::token::Approve {
-            to: ctx.accounts.nft_account.to_account_info(),
-            delegate: ctx.accounts.listing.to_account_info(),
-            authority: ctx.accounts.owner.to_account_info(),
-        },
-    );
-    anchor_spl::token::approve(approve_ctx, 1)?;
 
     Ok(())
 }
