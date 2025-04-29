@@ -4,10 +4,6 @@ use anchor_lang::prelude::*;
 pub struct VoucherExchange {
     // Authority that can manage the exchange
     pub authority: Pubkey,
-    // Fee percentage in basis points (1/100 of 1%)
-    pub fee_basis_points: u16,
-    // Account that receives the fee payments
-    pub fee_account: Pubkey,
     // Total number of listings created
     pub total_listings: u64,
     // Total number of bids created
@@ -30,8 +26,6 @@ pub struct VoucherListing {
     pub payment_mint: Pubkey,
     // Whether the listing is active
     pub active: bool,
-    // Reference to parent exchange
-    pub exchange: Pubkey,
     // Bump for PDA derivation
     pub bump: u8,
 }
@@ -52,8 +46,6 @@ pub struct VoucherBid {
     pub active: bool,
     // Whether the bid needs to be refunded
     pub requires_refund: bool,
-    // Reference to parent exchange
-    pub exchange: Pubkey,
     // Bump for PDA derivation
     pub bump: u8,
     // Bump for escrow PDA derivation
@@ -68,8 +60,6 @@ pub struct VoucherState {
     pub sold: bool,
     // Timestamp of the latest sale
     pub latest_sale_timestamp: i64,
-    // Reference to parent exchange
-    pub exchange: Pubkey,
     // Bump for PDA derivation
     pub bump: u8,
 }
@@ -77,8 +67,6 @@ pub struct VoucherState {
 impl VoucherExchange {
     pub const SIZE: usize = 8 +      // discriminator
         32 +                         // authority
-        2 +                          // fee_basis_points
-        32 +                         // fee_account
         8 +                          // total_listings
         8 +                          // total_bids
         1;                           // bump
@@ -105,7 +93,6 @@ impl VoucherBid {
         32 +                         // escrow_account
         1 +                          // active
         1 +                          // requires_refund
-        32 +                         // exchange
         1 +                          // bump
         1;                           // escrow_bump
 }
@@ -115,6 +102,5 @@ impl VoucherState {
         32 +                         // nft_mint
         1 +                          // sold
         8 +                          // latest_sale_timestamp
-        32 +                         // exchange
         1;                           // bump
 }

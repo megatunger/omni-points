@@ -9,7 +9,6 @@ pub struct CancelVoucherListing<'info> {
         mut,
         seeds = [
         VOUCHER_LISTING_SEED,
-        exchange.key().as_ref(),
         owner.key().as_ref(),
         nft_mint.key().as_ref()
         ],
@@ -17,8 +16,6 @@ pub struct CancelVoucherListing<'info> {
         constraint = listing.owner == owner.key() @ VoucherExchangeError::NotListingOwner
     )]
     pub listing: Account<'info, VoucherListing>,
-
-    pub exchange: Account<'info, VoucherExchange>,
 
     #[account(mut)]
     pub owner: Signer<'info>,

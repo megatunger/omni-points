@@ -14,10 +14,9 @@ pub mod voucher_exchange {
     use super::*;
 
     pub fn initialize_exchange(
-        ctx: Context<InitializeExchange>,
-        fee_basis_points: u16
+        ctx: Context<InitializeExchange>
     ) -> Result<()> {
-        instructions::initialize_exchange::handler(ctx, fee_basis_points)
+        instructions::initialize_exchange::handler(ctx)
     }
 
     pub fn create_voucher_listing(

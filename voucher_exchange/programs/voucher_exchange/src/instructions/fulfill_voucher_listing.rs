@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer};
+use anchor_spl::token_interface::{
+    TokenAccount, Mint, TokenInterface,
+    TransferChecked, transfer_checked
+};
 use anchor_spl::associated_token::AssociatedToken;
 use crate::state::*;
 use crate::errors::*;
@@ -11,7 +14,7 @@ pub struct FulfillVoucherListing<'info> {
         mut,
         seeds = [
         VOUCHER_LISTING_SEED,
-        exchange.key().as_ref(),
+        // Removed exchange.key().as_ref(),
         owner.key().as_ref(),
         nft_mint.key().as_ref()
         ],
@@ -21,9 +24,6 @@ pub struct FulfillVoucherListing<'info> {
     pub listing: Account<'info, VoucherListing>,
 
     #[account(mut)]
-    pub exchange: Account<'info, VoucherExchange>,
-
-    #[account(mut)]
     pub buyer: Signer<'info>,
 
     /// CHECK: Case where listing.owner doesn't sign
@@ -31,7 +31,7 @@ pub struct FulfillVoucherListing<'info> {
     pub owner: AccountInfo<'info>,
 
     #[account(mut)]
-    pub nft_mint: Account<'info, Mint>,
+    pub nft_mint: InterfaceAccount<'info, Mint>,
 
     // Create or update NFT state
     #[account(
@@ -40,7 +40,7 @@ pub struct FulfillVoucherListing<'info> {
         space = VoucherState::SIZE,
         seeds = [
         VOUCHER_STATE_SEED,
-        exchange.key().as_ref(),
+        // Removed exchange.key().as_ref(),
         nft_mint.key().as_ref()
         ],
         bump
@@ -53,7 +53,7 @@ pub struct FulfillVoucherListing<'info> {
         constraint = nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner,
         constraint = nft_account.key() == listing.nft_account @ VoucherExchangeError::NotNFTOwner
     )]
-    pub nft_account: Account<'info, TokenAccount>,
+    pub nft_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
@@ -61,17 +61,17 @@ pub struct FulfillVoucherListing<'info> {
         associated_token::mint = nft_mint,
         associated_token::authority = buyer
     )]
-    pub buyer_nft_account: Account<'info, TokenAccount>,
+    pub buyer_nft_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut)]
-    pub payment_mint: Account<'info, Mint>,
+    pub payment_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = buyer_payment_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice,
         constraint = buyer_payment_account.owner == buyer.key() @ VoucherExchangeError::NotBidder
     )]
-    pub buyer_payment_account: Account<'info, TokenAccount>,
+    pub buyer_payment_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
@@ -79,16 +79,9 @@ pub struct FulfillVoucherListing<'info> {
         associated_token::mint = payment_mint,
         associated_token::authority = owner
     )]
-    pub owner_payment_account: Account<'info, TokenAccount>,
+    pub owner_payment_account: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-        mut,
-        constraint = fee_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice,
-        constraint = fee_account.key() == exchange.fee_account @ VoucherExchangeError::NotExchangeAuthority
-    )]
-    pub fee_account: Account<'info, TokenAccount>,
-
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -111,50 +104,29 @@ pub fn handler(
         VoucherExchangeError::InsufficientNFTAmount
     );
 
-    // Calculate fee
-    let fee_basis_points = ctx.accounts.exchange.fee_basis_points as u64;
-    let fee_amount = price
-        .checked_mul(fee_basis_points as u64)
-        .unwrap()
-        .checked_div(BASIS_POINTS_DIVISOR as u64)
-        .unwrap();
-    let seller_amount = price.checked_sub(fee_amount).unwrap();
-
-    // 1. Transfer payment from buyer to seller
-    let payment_transfer_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.buyer_payment_account.to_account_info(),
-            to: ctx.accounts.owner_payment_account.to_account_info(),
-            authority: ctx.accounts.buyer.to_account_info(),
-        },
-    );
-
-    token::transfer(payment_transfer_ctx, seller_amount)?;
-
-    // 2. Transfer fee to exchange (if any)
-    if fee_amount > 0 {
-        let fee_payment_ctx = CpiContext::new(
+    // 1. Transfer full payment from buyer to seller (no fees)
+    transfer_checked(
+        CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            TransferChecked {
                 from: ctx.accounts.buyer_payment_account.to_account_info(),
-                to: ctx.accounts.fee_account.to_account_info(),
+                mint: ctx.accounts.payment_mint.to_account_info(),
+                to: ctx.accounts.owner_payment_account.to_account_info(),
                 authority: ctx.accounts.buyer.to_account_info(),
             },
-        );
+        ),
+        price, // Transfer the full price to the seller
+        ctx.accounts.payment_mint.decimals,
+    )?;
 
-        token::transfer(fee_payment_ctx, fee_amount)?;
-    }
-
-    // 3. Transfer NFT to buyer
-    let exchange_key = ctx.accounts.exchange.key();
+    // 2. Transfer NFT to buyer
+    // Removed exchange_key as it's no longer needed in seeds
     let owner_key = ctx.accounts.owner.key();
     let nft_mint_key = ctx.accounts.nft_mint.key();
     let bump = ctx.accounts.listing.bump;
 
     let listing_seeds = &[
         VOUCHER_LISTING_SEED,
-        exchange_key.as_ref(),
         owner_key.as_ref(),
         nft_mint_key.as_ref(),
         &[bump],
@@ -162,17 +134,20 @@ pub fn handler(
 
     let signer_seeds = &[&listing_seeds[..]];
 
-    let nft_transfer_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.nft_account.to_account_info(),
-            to: ctx.accounts.buyer_nft_account.to_account_info(),
-            authority: ctx.accounts.listing.to_account_info(), // Use listing as authority
-        },
-        signer_seeds,
-    );
-
-    token::transfer(nft_transfer_ctx, 1)?;
+    transfer_checked(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.nft_account.to_account_info(),
+                mint: ctx.accounts.nft_mint.to_account_info(),
+                to: ctx.accounts.buyer_nft_account.to_account_info(),
+                authority: ctx.accounts.listing.to_account_info(), // Use listing as authority
+            },
+            signer_seeds,
+        ),
+        1,
+        ctx.accounts.nft_mint.decimals,
+    )?;
 
     // Mark listing as inactive
     ctx.accounts.listing.active = false;
@@ -182,7 +157,6 @@ pub fn handler(
     nft_state.nft_mint = ctx.accounts.nft_mint.key();
     nft_state.sold = true;
     nft_state.latest_sale_timestamp = Clock::get()?.unix_timestamp;
-    nft_state.exchange = ctx.accounts.exchange.key();
     nft_state.bump = ctx.bumps.nft_state;
 
     Ok(())
