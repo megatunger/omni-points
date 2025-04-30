@@ -12,7 +12,7 @@ voucher_exchange = "AQgLTmiMJLXoEtmyVStnNxE6i175WdCwaXdedGD6hgSw"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
