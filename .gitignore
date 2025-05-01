@@ -39,3 +39,5 @@ tmp
 /.idea
 
 /secrets/*
+
+.env
