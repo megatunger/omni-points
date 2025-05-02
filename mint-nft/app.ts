@@ -10,11 +10,12 @@ import {
   keypairIdentity,
   KeypairSigner,
   percentAmount,
-  sol,
 } from "@metaplex-foundation/umi";
 import { mockStorage } from "@metaplex-foundation/umi-storage-mock";
 import * as fs from "fs";
 import { encryptVoucherData } from "./utils";
+import { PublicKey } from "@solana/web3.js";
+import { VietjetCollection } from "./constants";
 
 const secret = require("../secrets/wallet.json");
 
@@ -34,24 +35,6 @@ const nft = "vietjet/1";
 
 const nftDetail = require(`./uploads/${nft}/attributes.json`);
 
-async function uploadImage(): Promise<string> {
-  try {
-    const imgDirectory = `./uploads/${nft}`;
-    const imgName = "image.png";
-    const filePath = `${imgDirectory}/${imgName}`;
-    const fileBuffer = fs.readFileSync(filePath);
-    const image = createGenericFile(fileBuffer, imgName, {
-      uniqueName: nftDetail.name,
-      contentType: nftDetail.imgType,
-    });
-    const [imgUri] = await umi.uploader.upload([image]);
-    console.log("Uploaded image:", imgUri);
-    return imgUri;
-  } catch (e) {
-    throw e;
-  }
-}
-
 async function uploadMetadata(imageUri: string): Promise<string> {
   try {
     const metadata = {
@@ -68,16 +51,16 @@ async function uploadMetadata(imageUri: string): Promise<string> {
         ],
       },
     };
-    console.log("Metadata:", metadata);
-    const metadataUri = await umi.uploader.uploadJson(metadata);
-    console.log("Uploaded metadata:", metadataUri);
-    return metadataUri;
+    console.log("Metadata:", JSON.stringify(metadata));
+    // const metadataUri = await umi.uploader.uploadJson(metadata);
+    // console.log("Uploaded metadata:", metadataUri);
+    return "";
   } catch (e) {
     throw e;
   }
 }
 
-async function mintNft(metadataUri: string, collectionMint: KeypairSigner) {
+async function mintNft(metadataUri: string) {
   try {
     const mint = generateSigner(umi);
     await createNft(umi, {
@@ -86,7 +69,8 @@ async function mintNft(metadataUri: string, collectionMint: KeypairSigner) {
       uri: metadataUri,
       sellerFeeBasisPoints: percentAmount(nftDetail.royalties),
       creators: [{ address: creator.publicKey, verified: true, share: 0 }],
-      collection: { key: collectionMint.publicKey, verified: false },
+      // @ts-ignore
+      collection: { key: new PublicKey(VietjetCollection), verified: false },
     }).sendAndConfirm(umi);
     console.log(`Created NFT: ${mint.publicKey.toString()}`);
   } catch (e) {
@@ -94,23 +78,11 @@ async function mintNft(metadataUri: string, collectionMint: KeypairSigner) {
   }
 }
 
-const createCollection = async () => {
-  const collectionMint = generateSigner(umi);
-
-  await createNft(umi, {
-    mint: collectionMint,
-    name: `My Collection`,
-    uri,
-    sellerFeeBasisPoints: percentAmount(0),
-    isCollection: true,
-  }).sendAndConfirm(umi);
-};
-
 async function main() {
-  const imageUri = await uploadImage();
-  console.log("Uploaded image:", imageUri);
-  const metadataUri = await uploadMetadata(imageUri);
-  // await mintNft(metadataUri);
+  const imageUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/image.png`;
+  const metadataUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/attributes.json`;
+  // const metadataUri = await uploadMetadata(imageUri);
+  await mintNft(metadataUri);
 }
 
 main();
