@@ -67,8 +67,9 @@ async function mintNft(metadataUri: string) {
       mint,
       name: nftDetail.name,
       uri: metadataUri,
-      sellerFeeBasisPoints: percentAmount(nftDetail.royalties),
-      creators: [{ address: creator.publicKey, verified: true, share: 0 }],
+      sellerFeeBasisPoints: percentAmount(0),
+      creators: [{ address: creator.publicKey, verified: true, share: 100 }],
+      isCollection: true,
       // @ts-ignore
       collection: { key: new PublicKey(VietjetCollection), verified: false },
     }).sendAndConfirm(umi);

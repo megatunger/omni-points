@@ -1,11 +1,15 @@
-'use client'
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { Voucher } from '@/types/voucher';
-import toast from 'react-hot-toast';
-import { VoucherDialog } from './voucher-dialog';
-import { ActiveConfirmationDialog } from './active-confirmation-dialog';
-import { IconAlertTriangleFilled, IconCheck, IconInfoHexagonFilled } from '@tabler/icons-react';
+"use client";
+import React, { useState } from "react";
+import Image from "next/image";
+import { Voucher } from "@/types/voucher";
+import toast from "react-hot-toast";
+import { VoucherDialog } from "./voucher-dialog";
+import { ActiveConfirmationDialog } from "./active-confirmation-dialog";
+import {
+  IconAlertTriangleFilled,
+  IconCheck,
+  IconInfoHexagonFilled,
+} from "@tabler/icons-react";
 
 interface VoucherCardProps {
   voucher: Voucher;
@@ -13,7 +17,6 @@ interface VoucherCardProps {
   onBuy: (voucherId: string) => void;
   onSell: (voucherId: string) => void;
 }
-
 
 export const VoucherCard: React.FC<VoucherCardProps> = ({
   voucher,
@@ -25,7 +28,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUseConfirmation, setShowUseConfirmation] = useState(false);
 
-  const fallbackImage = '/images/placeholder-voucher.jpg'; // Add a placeholder image in your public folder
+  const fallbackImage = "/images/placeholder-voucher.jpg"; // Add a placeholder image in your public folder
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString();
@@ -39,17 +42,16 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
       // Simply open dialog for already used vouchers
       setIsDialogOpen(true);
     }
-
-  }
+  };
   const handleBuy = (e: React.MouseEvent) => {
     e.stopPropagation();
     onBuy(voucher.id);
-  }
+  };
 
   const handleSell = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSell(voucher.id);
-  }
+  };
 
   return (
     <>
@@ -59,15 +61,21 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
       >
         {isOwned && voucher.isRedeemed && (
           <div className="absolute top-0 left-0 z-10">
-            <div className="tooltip tooltip-right" data-tip="This voucher cannot be sold because the discount code has been revealed">
+            <div
+              className="tooltip tooltip-right"
+              data-tip="This voucher cannot be sold because the discount code has been revealed"
+            >
               <div className="badge badge-info gap-2 p-4 shadow-lg backdrop-blur-xl bg-info/90">
-                <IconInfoHexagonFilled size={20} className="stroke-[0.5] text-info-content" />
+                <IconInfoHexagonFilled
+                  size={20}
+                  className="stroke-[0.5] text-info-content"
+                />
               </div>
             </div>
           </div>
         )}
 
-        <figure className="px-10 pt-10 relative h-[200px]">
+        <figure className="px-10 pt-10 relative h-[360px]">
           <Image
             src={imageError ? fallbackImage : voucher.thumbnailUrl}
             alt={voucher.name}
@@ -75,14 +83,16 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
             sizes="(max-width: 200px) 100vw, 200px"
             className="rounded-xl object-cover transform transition-transform duration-300"
             onError={() => setImageError(true)}
-            unoptimized={voucher.thumbnailUrl.startsWith('http')}
+            unoptimized={voucher.thumbnailUrl.startsWith("http")}
           />
         </figure>
         <div className="card-body">
           <h2 className="card-title">{voucher.brand}</h2>
           <p className="text-lg font-semibold">{voucher.name}</p>
           <div className="text-sm text-gray-600">
-            <p>{formatDate(voucher.validFrom)} - {formatDate(voucher.validTo)}</p>
+            <p>
+              {formatDate(voucher.validFrom)} - {formatDate(voucher.validTo)}
+            </p>
           </div>
           <div className="card-actions justify-between items-center mt-4">
             <span className="text-primary font-bold">{voucher.points} OPT</span>
@@ -133,8 +143,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
         onConfirm={() => {
           setIsDialogOpen(true);
           setShowUseConfirmation(false);
-        }
-        }
+        }}
         title="Use Voucher"
         message="Are you sure you want to use this voucher? Once used, it cannot be sold or transferred."
       />
