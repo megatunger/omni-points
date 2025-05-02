@@ -1,0 +1,13 @@
+{
+  "name": "VIETJET_VJ1137_#1",
+  "royalties": 0.0,
+  "description": "01 Free ticket VJ1137 HAN-SGN 12:45-14:55, 31 May 2025.",
+  "imgType": "image/png",
+  "attributes": [
+    { "trait_type": "redeemable_start", "value": 1746032400 },
+    { "trait_type": "redeemable_end", "value": 1747242000 },
+    { "trait_type": "redeemable", "value": true },
+    { "trait_type": "expires_at", "value": 1748624400 },
+    { "trait_type": "secret_code", "value": "<AUTO_GENERATED>" }
+  ]
+}

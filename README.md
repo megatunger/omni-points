@@ -1,5 +1,9 @@
 # template-next-tailwind-basic
 
+## Address
+- Token: `opt687jT4FsT6mza5rxMVoZkoSPaNpnorUBMeLY7e61`
+- Wallet: `JB2PffXm8f7Dq5g4xGBcnYyfjLCyPu5JDkm7xuWiMgwFain`
+
 ## Environment
 ```bash
 export OMNI_POINTS_PASSWORD=
