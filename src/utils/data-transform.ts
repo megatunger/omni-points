@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 const getAttributeValue = (attributes, traitType) => {
   return (
     _.chain(attributes)
