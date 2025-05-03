@@ -10,5 +10,5 @@ export const VOUCHER_EXCHANGE_PROGRAM_ID = new PublicKey(
 );
 
 export function getVoucherExchangeProgram(provider: AnchorProvider) {
-  return new Program(VoucherExchangeIDL as VoucherExchange, provider);
+  return new Program<VoucherExchange>(VoucherExchangeIDL as VoucherExchange, provider);
 }

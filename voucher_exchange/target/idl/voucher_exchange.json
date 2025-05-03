@@ -1,5 +1,5 @@
 {
-  "address": "AQgLTmiMJLXoEtmyVStnNxE6i175WdCwaXdedGD6hgSw",
+  "address": "CnupugmHFWwcaq1wnK9xfUibxX2LDaPbjQp9aA7trHjL",
   "metadata": {
     "name": "voucher_exchange",
     "version": "0.1.0",
@@ -464,6 +464,36 @@
           "name": "nft_mint"
         },
         {
+          "name": "owner_nft_account",
+          "writable": true
+        },
+        {
+          "name": "escrow_nft_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nft_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -558,38 +588,38 @@
             "program": {
               "kind": "const",
               "value": [
-                139,
-                202,
-                4,
-                141,
-                186,
-                78,
-                107,
-                74,
-                72,
-                192,
-                120,
-                119,
-                233,
-                79,
-                86,
-                239,
-                235,
-                47,
-                173,
-                222,
-                59,
+                175,
+                51,
                 108,
-                2,
-                126,
-                31,
-                195,
-                61,
-                213,
-                242,
-                91,
+                83,
+                212,
+                59,
+                22,
+                87,
+                148,
                 198,
-                44
+                83,
+                137,
+                247,
+                168,
+                151,
+                230,
+                38,
+                109,
+                77,
+                149,
+                53,
+                61,
+                99,
+                166,
+                143,
+                118,
+                50,
+                11,
+                85,
+                58,
+                166,
+                47
               ]
             }
           }
@@ -713,8 +743,31 @@
           "name": "nft_mint"
         },
         {
-          "name": "nft_account",
+          "name": "owner_nft_account",
           "writable": true
+        },
+        {
+          "name": "escrow_nft_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nft_mint"
+              }
+            ]
+          }
         },
         {
           "name": "payment_mint"
@@ -1417,6 +1470,16 @@
       "code": 6012,
       "name": "InvalidBidState",
       "msg": "Invalid bid state for this operation"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidEscrowOwner",
+      "msg": "Invalid escrow owner"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidNFTAccount",
+      "msg": "Invalid nft account"
     }
   ],
   "types": [

@@ -40,4 +40,10 @@ pub enum VoucherExchangeError {
 
     #[msg("Invalid bid state for this operation")]
     InvalidBidState,
+
+    #[msg("Invalid escrow owner")]
+    InvalidEscrowOwner,
+
+    #[msg("Invalid nft account")]
+    InvalidNFTAccount,
 }

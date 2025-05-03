@@ -8,9 +8,10 @@ import {
 } from "@metaplex-foundation/mpl-token-metadata";
 import { publicKey } from "@metaplex-foundation/umi";
 import { NextResponse } from "next/server";
+import * as process from "node:process";
 
 export async function GET(request: Request) {
-  const umi = createUmi(clusterApiUrl("devnet")).use(mplTokenMetadata());
+  const umi = createUmi(process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com").use(mplTokenMetadata());
 
   // If params include `?address=...`, use that address
   // Otherwise, use the default address
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
     allNFTs.map(async (nft) => {
       const response = await fetch(nft.metadata.uri);
       let _metadata;
+      console.log(nft.metadata.uri)
       try {
         _metadata = await response.json();
       } catch (error) {

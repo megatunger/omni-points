@@ -1,15 +1,28 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useFetchRewardsType } from "@/service/rewards/useFetchRewards";
 import useEligibleToBuy from "@/service/token/useEligibleToBuy";
 import useRedeemReward from "@/service/rewards/useRedeemReward";
 import { ArrowRightIcon } from "lucide-react";
 import useRevealCode from "@/service/rewards/useRevealCode";
+import { useVoucherExchange } from "@/service/voucher-exchange-program/useVoucherExchange";
+import { PublicKey } from "@solana/web3.js";
+import BN from "bn.js";
+import { OptToken } from "@/utils/constants";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const { mutateAsync, isPending, data } = useRedeemReward(address);
   const { mutateAsync: revealCode, isPending: isRevealing } =
     useRevealCode(address);
+  const { createVoucherListing } = useVoucherExchange();
+  const [isListing, setIsListing] = useState(false);
+  const wallet = useWallet();
+  const { publicKey } = wallet;
+
   const getAttribute = (traitType: string) => {
     if (!metadata?.attributes) return null;
     return Object.values(metadata?.attributes)?.find(
@@ -36,6 +49,33 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   };
 
   const isOwned = !isLoading && isRedeemable === "owned";
+
+  // Handle listing voucher
+  const handleListVoucher = async () => {
+    if (!publicKey) {
+      console.error("Wallet not connected");
+      return;
+    }
+
+    try {
+      setIsListing(true);
+
+      // Convert price to proper decimal representation
+      // Assuming OptToken has 9 decimals based on the code
+      const listingPrice = new BN(price * 10 ** 9);
+
+      // Create the voucher listing
+      await createVoucherListing.mutateAsync({
+        nftMint: new PublicKey(address),
+        paymentMint: OptToken,
+        price: listingPrice,
+      });
+    } catch (error) {
+      console.error("Error listing voucher:", error);
+    } finally {
+      setIsListing(false);
+    }
+  };
 
   if (!metadata) return <></>;
 
@@ -98,6 +138,20 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
             </span>
           )}
         </button>
+
+        {/* Add List Voucher button when the user owns the voucher */}
+        {isOwned && (
+          <button
+            onClick={handleListVoucher}
+            className="btn btn-secondary w-full mt-2"
+            disabled={isListing || createVoucherListing.isPending || !publicKey}
+          >
+            {(isListing || createVoucherListing.isPending) && (
+              <span className="loading loading-spinner mr-2"></span>
+            )}
+            List Voucher
+          </button>
+        )}
       </div>
     </div>
   );
