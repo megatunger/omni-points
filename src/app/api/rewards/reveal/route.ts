@@ -4,14 +4,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    if (!body || !body.rewardPublicKey) {
+    if (!body || !body.rewardPublicKey || !body.walletPublicKey) {
       return NextResponse.json(
         { error: "Missing required fields: rewardPublicKey" },
         { status: 400 },
       );
     }
 
-    const { rewardPublicKey } = body;
+    const { rewardPublicKey, walletPublicKey } = body;
 
     // Simulate reward reveal logic (replace with actual implementation)
     const revealedReward = {

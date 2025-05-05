@@ -1,5 +1,5 @@
-import DashboardFeature from '@/components/dashboard/dashboard-feature'
+import NewDashboardPage from "@/components/new-dashboard";
 
 export default function Page() {
-  return <DashboardFeature />
+  return <NewDashboardPage />;
 }

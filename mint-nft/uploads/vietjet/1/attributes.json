@@ -10,7 +10,8 @@
     "4": {
       "trait_type": "secret_code",
       "value": "6910893f61322709b32963db92ca5c88c960abc07cbf99ec300fe9b6b452d08fGEIY1qTBOlEG/6NFAxSyww==69104e7127037357fb1a0aa95bd368711c4e04b102dc874d56adcef1cc74a581"
-    }
+    },
+    "5": { "trait_type": "price", "value": 1000 }
   },
   "properties": {
     "files": [
