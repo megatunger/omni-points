@@ -4,9 +4,16 @@ import React from "react";
 import ActivitySection from "@/components/new-dashboard/components/ActivitySection";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { AnimatedNumber } from "@/app/components/motion-primitives/animated-number";
+import useFetchCurrentVikkiToken from "@/service/token/useFetchCurrentVikkiToken";
 
-const WelcomeCard = ({ points }: { points: number }) => {
-  const { connected, publicKey } = useWallet();
+const WelcomeCard = () => {
+  const { connected, connecting, publicKey } = useWallet();
+  const { data, isLoading, error } = useFetchCurrentVikkiToken();
+
+  const points = data?.amount || 0;
+  if (connecting) {
+    return <div className="skeleton h-100 w-full"></div>;
+  }
 
   if (!connected) {
     return <></>;
@@ -20,19 +27,23 @@ const WelcomeCard = ({ points }: { points: number }) => {
           {publicKey?.toString()?.slice(0, 14)}...
         </h2>
 
-        <p className="mb-4 text-lg">
-          Your points:
-          <span className="ml-2 font-semibold">
-            <AnimatedNumber
-              className="inline-flex items-center font-mono text-2xl"
-              springOptions={{
-                bounce: 0,
-                duration: 2000,
-              }}
-              value={points}
-            />
-          </span>
-        </p>
+        {isLoading ? (
+          <div className="skeleton h-8 w-24 mb-4"></div>
+        ) : (
+          <p className="mb-4 text-lg">
+            Your points:
+            <span className="ml-2 font-semibold">
+              <AnimatedNumber
+                className="inline-flex items-center font-mono text-2xl"
+                springOptions={{
+                  bounce: 0,
+                  duration: 2000,
+                }}
+                value={points}
+              />
+            </span>
+          </p>
+        )}
         <button className="btn btn-primary">View Your Rewards</button>
       </div>
       <div className="flex-2/4">

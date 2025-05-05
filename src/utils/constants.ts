@@ -1,4 +1,4 @@
-import { clusterApiUrl, Connection, Keypair } from "@solana/web3.js";
+import { clusterApiUrl, Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { Axios } from "axios";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { mplTokenMetadata } from "@metaplex-foundation/mpl-token-metadata";
@@ -11,6 +11,10 @@ export const connection = new Connection(cluster);
 export const umi = createUmi(cluster).use(mplTokenMetadata());
 
 export const AppKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
+
+export const OptToken = new PublicKey(
+  "opt687jT4FsT6mza5rxMVoZkoSPaNpnorUBMeLY7e61",
+);
 
 export const axios = new Axios({
   responseType: "json",
