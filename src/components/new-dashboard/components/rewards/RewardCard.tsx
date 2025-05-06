@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { useFetchRewardsType } from "@/service/rewards/useFetchRewards";
+import useEligibleToBuy from "@/service/token/useEligibleToBuy";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const getAttribute = (traitType: string) => {
@@ -11,7 +12,8 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   };
 
   const price = getAttribute("price") as number;
-  const isRedeemable = getAttribute("redeemable") as boolean;
+  const { data: isRedeemable } = useEligibleToBuy(price);
+  // const isRedeemable = getAttribute("redeemable") as boolean;
   const redeemableStart = new Date(
     (getAttribute("redeemable_start") as number) * 1000,
   );

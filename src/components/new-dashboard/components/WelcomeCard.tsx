@@ -8,7 +8,7 @@ import useFetchCurrentVikkiToken from "@/service/token/useFetchCurrentVikkiToken
 
 const WelcomeCard = () => {
   const { connected, connecting, publicKey } = useWallet();
-  const { data, isLoading, error } = useFetchCurrentVikkiToken();
+  const { data, isLoading } = useFetchCurrentVikkiToken();
 
   const points = data?.amount || 0;
   if (connecting) {
@@ -16,7 +16,11 @@ const WelcomeCard = () => {
   }
 
   if (!connected) {
-    return <></>;
+    return (
+      <div className="card bg-base-100 shadow-sm rounded-lg p-6 flex flex-row items-center justify-center">
+        Wallet not connected
+      </div>
+    );
   }
 
   return (
