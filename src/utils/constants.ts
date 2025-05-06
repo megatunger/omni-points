@@ -3,6 +3,7 @@ import { Axios } from "axios";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { mplTokenMetadata } from "@metaplex-foundation/mpl-token-metadata";
 import secretKey from "../../secrets/wallet.json";
+import { createKeyPairSignerFromBytes, createSolanaClient } from "gill";
 
 const cluster = clusterApiUrl("devnet");
 
@@ -17,5 +18,15 @@ export const OptToken = new PublicKey(
 );
 
 export const axios = new Axios({
+  transformRequest: [(data) => JSON.stringify(data)],
+  transformResponse: [(data) => JSON.parse(data)],
   responseType: "json",
+  baseURL: "http://localhost:3000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export const { rpc, sendAndConfirmTransaction } = createSolanaClient({
+  urlOrMoniker: "devnet",
 });

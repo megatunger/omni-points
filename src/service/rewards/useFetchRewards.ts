@@ -50,7 +50,8 @@ function useFetchRewards() {
   return useQuery<useFetchRewardsType>({
     queryKey: ["rewards"],
     queryFn: async () => {
-      return JSON.parse((await axios.get("/api/rewards"))?.data);
+      const response = await axios.get("/rewards");
+      return response.data;
     },
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
