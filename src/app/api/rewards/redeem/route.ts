@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
-  const priceAmount = Number(priceAttr.value);
+  const priceAmount = Number(priceAttr.value) * 10 ** 9; // convert to lamports
 
   // derive ATAs
   const serverPubkey = AppKeypair.publicKey;
@@ -52,16 +52,26 @@ export async function POST(req: Request) {
     mintPubkey,
     recipient,
   );
-  const clientOptAta = await getAssociatedTokenAddress(OptToken, recipient);
-  const serverOptAta = await getAssociatedTokenAddress(OptToken, serverPubkey);
+  const clientOptAta = await getAssociatedTokenAddress(
+    OptToken,
+    recipient,
+    false,
+    TOKEN_2022_PROGRAM_ID,
+  );
+  const serverOptAta = await getAssociatedTokenAddress(
+    OptToken,
+    serverPubkey,
+    false,
+    TOKEN_2022_PROGRAM_ID,
+  );
 
-  console.log("priceAmount", priceAmount);
   // 1. client must pay price in OPT into your server’s ATA
   const ixClientCreateOptAta = createAssociatedTokenAccountInstruction(
     recipient, // payer
     clientOptAta, // associated account
     recipient, // owner of new ATA
     OptToken,
+    TOKEN_2022_PROGRAM_ID,
   );
   const ixClientPayOpt = createTransferInstruction(
     clientOptAta,
@@ -92,8 +102,8 @@ export async function POST(req: Request) {
   const transaction = new Transaction().add(
     // ixClientCreateOptAta,
     ixClientPayOpt,
-    // ixServerCreateNftAta,
-    // ixServerReturnNft,
+    ixServerCreateNftAta,
+    ixServerReturnNft,
   );
   transaction.recentBlockhash = latestBlockhash.blockhash;
   transaction.feePayer = AppKeypair.publicKey;

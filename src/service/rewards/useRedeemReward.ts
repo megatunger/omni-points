@@ -1,7 +1,8 @@
 import { axios } from "@/utils/constants";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Transaction } from "@solana/web3.js";
+import { useFetchRewardsKey } from "@/service/rewards/useFetchRewards";
 
 export type useRedeemRewardType = {
   instructions: string;
@@ -23,6 +24,7 @@ export type useRedeemRewardType = {
 
 function useRedeemReward(address: string) {
   const { publicKey, signTransaction, sendTransaction } = useWallet();
+  const queryClient = useQueryClient();
   const connection = useConnection();
   return useMutation({
     mutationFn: async () => {
@@ -35,13 +37,23 @@ function useRedeemReward(address: string) {
       );
       const instructions = Buffer.from(data.instructions, "base64");
       const transaction = Transaction.from(instructions);
-      const tx = await signTransaction?.(transaction);
-      const txSig = await sendTransaction(tx!, connection.connection);
-      // Display tx on solana explorer
-      const explorerUrl = `https://explorer.solana.com/tx/${txSig}?cluster=devnet`;
+      // const tx = await signTransaction?.(transaction);
+      try {
+        const txSig = await sendTransaction(
+          transaction!,
+          connection.connection,
+        );
+        // Display tx on solana explorer
+        const explorerUrl = `https://explorer.solana.com/tx/${txSig}?cluster=devnet`;
 
-      console.log(txSig);
-      window.open(explorerUrl, "_blank");
+        console.log(txSig);
+        window.open(explorerUrl, "_blank");
+        queryClient.invalidateQueries({
+          queryKey: useFetchRewardsKey,
+        });
+      } catch (error) {
+        console.log(error);
+      }
     },
   });
 }

@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { axios } from "@/utils/constants";
 
+export const useFetchRewardsKey = ["rewards"];
+
 export type useFetchRewardsType = Array<{
   address: string;
   name: string;
@@ -46,11 +48,15 @@ export type useFetchRewardsType = Array<{
   };
 }>;
 
-function useFetchRewards() {
+function useFetchRewards({ address }: { address?: string } = {}) {
   return useQuery<useFetchRewardsType>({
-    queryKey: ["rewards"],
+    queryKey: [...useFetchRewardsKey, address],
     queryFn: async () => {
-      const response = await axios.get("/rewards");
+      const response = await axios.get("/rewards", {
+        params: {
+          address,
+        },
+      });
       return response.data;
     },
     refetchOnWindowFocus: false,

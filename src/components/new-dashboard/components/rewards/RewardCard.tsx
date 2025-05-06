@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useFetchRewardsType } from "@/service/rewards/useFetchRewards";
 import useEligibleToBuy from "@/service/token/useEligibleToBuy";
 import useRedeemReward from "@/service/rewards/useRedeemReward";
+import { ArrowRightIcon } from "lucide-react";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const { mutateAsync, isPending, data } = useRedeemReward(address);
@@ -14,7 +15,7 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   };
 
   const price = getAttribute("price") as number;
-  const { data: isRedeemable, isLoading } = useEligibleToBuy(price);
+  const { data: isRedeemable, isLoading } = useEligibleToBuy(price, address);
   // const isRedeemable = getAttribute("redeemable") as boolean;
   const redeemableStart = new Date(
     (getAttribute("redeemable_start") as number) * 1000,
@@ -31,6 +32,8 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
       day: "numeric",
     });
   };
+
+  const isOwned = isRedeemable === "owned";
 
   if (!metadata) return <></>;
 
@@ -73,14 +76,22 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
         </div>
 
         <button
-          onClick={() => mutateAsync()}
+          onClick={() => {
+            return mutateAsync();
+          }}
           className={`btn btn-primary w-full ${!isRedeemable ? "btn-disabled" : ""}`}
           disabled={!isRedeemable}
         >
           {(isPending || isLoading) && (
             <span className="loading loading-spinner mr-2"></span>
           )}
-          {isRedeemable ? "Redeem Now" : "Not Available"}
+          {isRedeemable === true && "Redeem"}
+          {isRedeemable === false && "Not Available"}
+          {isOwned && (
+            <span className="flex flex-row items-center justify-center">
+              Reveal Code & Booking <ArrowRightIcon className="ml-2" />
+            </span>
+          )}
         </button>
       </div>
     </div>

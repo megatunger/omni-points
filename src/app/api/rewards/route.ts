@@ -1,5 +1,5 @@
 import { Metaplex } from "@metaplex-foundation/js";
-import { connection } from "@/utils/constants";
+import { AppKeypair, connection } from "@/utils/constants";
 import { clusterApiUrl, PublicKey } from "@solana/web3.js";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
@@ -12,15 +12,26 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const umi = createUmi(clusterApiUrl("devnet")).use(mplTokenMetadata());
 
+  // If params include `?address=...`, use that address
+  // Otherwise, use the default address
+  const url = new URL(request.url);
+  const params = url.searchParams;
+  const address = params.get("address");
+  const defaultAddress = AppKeypair.publicKey;
+
   // The owner's public key
-  const ownerPublicKey = publicKey(
-    "JB2PffXm8f7Dq5g4xGBcnYyfjLCyPu5JDkm7xuWiMgwF",
-  );
+  const ownerPublicKey = address || defaultAddress.toString();
 
   console.log("Fetching NFTs...");
-  const allNFTs = await fetchAllDigitalAssetWithTokenByOwner(
+  let allNFTs = await fetchAllDigitalAssetWithTokenByOwner(
     umi,
-    ownerPublicKey,
+    publicKey(ownerPublicKey),
+  );
+
+  // Filter NFTs created by omni points
+  allNFTs = allNFTs.filter(
+    (e) =>
+      e.metadata.updateAuthority.toString() === AppKeypair.publicKey.toString(),
   );
 
   console.log("allNFTs", allNFTs);
@@ -42,6 +53,8 @@ export async function GET(request: Request) {
       };
     }),
   );
-  return NextResponse.json(data.filter((x) => x));
+  return NextResponse.json(
+    data.filter((x) => !!x.metadata && !!x?.metadata?.attributes),
+  );
   // return new Response("Hello, from API!");re
 }

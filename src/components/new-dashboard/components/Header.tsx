@@ -23,6 +23,11 @@ const TABS = [
 ];
 const Header = () => {
   const { disconnect, connected } = useWallet();
+  const currentTab = TABS.find((tab) =>
+    typeof window !== "undefined"
+      ? tab.href === window.location.pathname
+      : false,
+  );
   return (
     <div className="navbar bg-base-100 shadow-sm rounded-2xl">
       <div className="navbar-start">
@@ -31,7 +36,7 @@ const Header = () => {
       <div className="">
         <div className="flex w-full space-x-2 rounded-xl  p-2">
           <AnimatedBackground
-            defaultValue={TABS[0].label}
+            defaultValue={currentTab?.label}
             className="rounded-lg bg-accent-content/60"
             transition={{
               type: "spring",
