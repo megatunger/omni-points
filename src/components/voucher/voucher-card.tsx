@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { VoucherDialog } from './voucher-dialog';
 import { ActiveConfirmationDialog } from './active-confirmation-dialog';
 import { IconAlertTriangleFilled, IconCheck, IconInfoHexagonFilled } from '@tabler/icons-react';
+import { BidDialog } from './bid-dialog';
 
 interface VoucherCardProps {
   voucher: Voucher;
@@ -24,6 +25,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showUseConfirmation, setShowUseConfirmation] = useState(false);
+  const [isBidDialogOpen, setIsBidDialogOpen] = useState(false);
 
   const fallbackImage = '/images/placeholder-voucher.jpg'; // Add a placeholder image in your public folder
 
@@ -49,6 +51,16 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
   const handleSell = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSell(voucher.id);
+  }
+
+  const handleBid = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsBidDialogOpen(true);
+  }
+
+  const handlePlaceBid = (bidAmount: number) => {
+    // Handle bid logic here
+    toast.success(`Bid of ${bidAmount} placed successfully!`);
   }
 
   return (
@@ -89,12 +101,20 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
 
             {/* Available voucher */}
             {!isOwned && (
-              <button
-                className="btn btn-secondary hover:btn-primary transition-colors duration-300"
-                onClick={handleBuy}
-              >
-                Buy Voucher
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="btn btn-primary hover:btn-primary transition-colors duration-300"
+                  onClick={handleBuy}
+                >
+                  Buy
+                </button>
+                <button
+                  className="btn btn-secondary hover:btn-secondary transition-colors duration-300"
+                  onClick={handleBid}
+                >
+                  Bid
+                </button>
+              </div>
             )}
 
             {/* Owned voucher */}
@@ -102,14 +122,14 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
               <div className="flex gap-2">
                 {!voucher.isRedeemed && (
                   <button
-                    className="btn btn-secondary hover:btn-primary transition-colors duration-300"
+                    className="btn btn-primary hover:btn-primary transition-colors duration-300"
                     onClick={handleSell}
                   >
                     Sell
                   </button>
                 )}
                 <button
-                  className="btn btn-secondary hover:btn-primary transition-colors duration-300"
+                  className="btn btn-secondary hover:btn-secondary transition-colors duration-300"
                   onClick={(event) => handleUseNow(event)}
                 >
                   Use Now
@@ -138,6 +158,16 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
         title="Use Voucher"
         message="Are you sure you want to use this voucher? Once used, it cannot be sold or transferred."
       />
+
+      <BidDialog
+        voucher={voucher}
+        isOpen={isBidDialogOpen}
+        onClose={() => setIsBidDialogOpen(false)}
+        onPlaceBid={(voucherId, bidAmount) => {
+          handlePlaceBid(bidAmount);
+        }}
+      />
+
     </>
   );
 };

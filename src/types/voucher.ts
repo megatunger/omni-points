@@ -1,3 +1,5 @@
+import { VoucherBidding } from "./bid";
+
 export interface Voucher {
   id: string;
   brand: string;
@@ -9,4 +11,5 @@ export interface Voucher {
   conditions?: string;
   isRedeemed?: boolean;
   discountCode?: string;
+  bid: VoucherBidding;
 }
