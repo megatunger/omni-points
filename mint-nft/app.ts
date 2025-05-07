@@ -31,36 +31,10 @@ umi.use(keypairIdentity(creator));
 umi.use(mplTokenMetadata());
 umi.use(mockStorage());
 
-const nft = "vietjet/1";
+async function mintNft(nft: string) {
+  const metadataUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/attributes.json`;
+  const nftDetail = require(`./uploads/${nft}/attributes.json`);
 
-const nftDetail = require(`./uploads/${nft}/attributes.json`);
-
-async function uploadMetadata(imageUri: string): Promise<string> {
-  try {
-    const metadata = {
-      name: nftDetail.name,
-      description: nftDetail.description,
-      image: imageUri,
-      attributes: encryptVoucherData(nftDetail.attributes),
-      properties: {
-        files: [
-          {
-            type: nftDetail.imgType,
-            uri: imageUri,
-          },
-        ],
-      },
-    };
-    console.log("Metadata:", JSON.stringify(metadata));
-    // const metadataUri = await umi.uploader.uploadJson(metadata);
-    // console.log("Uploaded metadata:", metadataUri);
-    return "";
-  } catch (e) {
-    throw e;
-  }
-}
-
-async function mintNft(metadataUri: string) {
   try {
     const mint = generateSigner(umi);
     await createNft(umi, {
@@ -80,10 +54,7 @@ async function mintNft(metadataUri: string) {
 }
 
 async function main() {
-  const imageUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/image.png`;
-  const metadataUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/attributes.json`;
-  // const metadataUri = await uploadMetadata(imageUri);
-  await mintNft(metadataUri);
+  await mintNft("vietjet/1");
 }
 
 main();

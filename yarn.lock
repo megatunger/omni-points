@@ -1529,6 +1529,13 @@
     "@solana/spl-token" "^0.3.6"
     "@solana/web3.js" "^1.66.2"
 
+"@metaplex-foundation/mpl-core@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-core/-/mpl-core-1.3.0.tgz#35e4782655020fb019f165caaae797b74b8d3de0"
+  integrity sha512-+j8A3IcgT/G1WY6NOA9prCrYV0AuVGKIsamlmcUUwbhs5QFX4jglIHLf9oQTFGRWlj+MG8TklSX3S7cmZVsj4w==
+  dependencies:
+    "@msgpack/msgpack" "^3.0.0-beta2"
+
 "@metaplex-foundation/mpl-token-metadata@^2.11.0", "@metaplex-foundation/mpl-token-metadata@^2.5.2":
   version "2.13.0"
   resolved "https://registry.npmjs.org/@metaplex-foundation/mpl-token-metadata/-/mpl-token-metadata-2.13.0.tgz"
@@ -1653,6 +1660,13 @@
     "@metaplex-foundation/umi-serializers-encodings" "^1.2.0"
     "@metaplex-foundation/umi-serializers-numbers" "^1.2.0"
 
+"@metaplex-foundation/umi-signer-wallet-adapters@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@metaplex-foundation/umi-signer-wallet-adapters/-/umi-signer-wallet-adapters-1.2.0.tgz#aa1baea38e3e75a2cc0e4d711df3ff43bac18ea8"
+  integrity sha512-HwC73FQr6NBRkLiW3ksjDaGpWPSxmiiyXuVksG/WMBxB+jVfeh+CqgOlxqvnOjN96M+Y3apKnPNUQvbSNbgkog==
+  dependencies:
+    "@metaplex-foundation/umi-web3js-adapters" "^1.2.0"
+
 "@metaplex-foundation/umi-transaction-factory-web3js@^1.2.0":
   version "1.2.0"
   resolved "https://registry.npmjs.org/@metaplex-foundation/umi-transaction-factory-web3js/-/umi-transaction-factory-web3js-1.2.0.tgz"
@@ -1696,6 +1710,11 @@
     "@metaplex-foundation/umi-options" "^1.2.0"
     "@metaplex-foundation/umi-public-keys" "^1.2.0"
     "@metaplex-foundation/umi-serializers" "^1.2.0"
+
+"@msgpack/msgpack@^3.0.0-beta2":
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/@msgpack/msgpack/-/msgpack-3.1.1.tgz#6f09ada4767a163f225cb7fc15bccbcef781fe4c"
+  integrity sha512-DnBpqkMOUGayNVKyTLlkM6ILmU/m/+VUxGkuQlPQVAcvreLz5jn1OlQnWd8uHKL/ZSiljpM12rjRhr51VtvJUQ==
 
 "@napi-rs/wasm-runtime@^0.2.8", "@napi-rs/wasm-runtime@^0.2.9":
   version "0.2.9"
@@ -2730,11 +2749,7 @@
     "@solana/wallet-standard-core" "^1.1.2"
     "@solana/wallet-standard-wallet-adapter" "^1.1.4"
 
-<<<<<<< HEAD
-"@solana/web3.js@^1.32.0", "@solana/web3.js@^1.58.0", "@solana/web3.js@^1.69.0", "@solana/web3.js@^1.95.3", "@solana/web3.js@^1.95.5", "@solana/web3.js@^1.98.0", "@solana/web3.js@^1.98.2":
-=======
 "@solana/web3.js@1", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.50.1", "@solana/web3.js@^1.56.2", "@solana/web3.js@^1.63.1", "@solana/web3.js@^1.66.2", "@solana/web3.js@^1.69.0", "@solana/web3.js@^1.95.3":
->>>>>>> main
   version "1.98.2"
   resolved "https://registry.npmjs.org/@solana/web3.js/-/web3.js-1.98.2.tgz"
   integrity sha512-BqVwEG+TaG2yCkBMbD3C4hdpustR4FpuUFRPUmqRZYYlPI9Hg4XMWxHWOWRzHE9Lkc9NDjzXFX7lDXSgzC7R1A==

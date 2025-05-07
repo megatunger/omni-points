@@ -48,7 +48,7 @@ function useRedeemReward(address: string) {
 
         console.log(txSig);
         window.open(explorerUrl, "_blank");
-        queryClient.invalidateQueries({
+        await queryClient.invalidateQueries({
           queryKey: useFetchRewardsKey,
         });
       } catch (error) {

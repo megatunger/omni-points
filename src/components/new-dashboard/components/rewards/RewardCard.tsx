@@ -4,9 +4,12 @@ import { useFetchRewardsType } from "@/service/rewards/useFetchRewards";
 import useEligibleToBuy from "@/service/token/useEligibleToBuy";
 import useRedeemReward from "@/service/rewards/useRedeemReward";
 import { ArrowRightIcon } from "lucide-react";
+import useRevealCode from "@/service/rewards/useRevealCode";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const { mutateAsync, isPending, data } = useRedeemReward(address);
+  const { mutateAsync: revealCode, isPending: isRevealing } =
+    useRevealCode(address);
   const getAttribute = (traitType: string) => {
     if (!metadata?.attributes) return null;
     return Object.values(metadata?.attributes)?.find(
@@ -16,7 +19,6 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
 
   const price = getAttribute("price") as number;
   const { data: isRedeemable, isLoading } = useEligibleToBuy(price, address);
-  // const isRedeemable = getAttribute("redeemable") as boolean;
   const redeemableStart = new Date(
     (getAttribute("redeemable_start") as number) * 1000,
   );
@@ -33,7 +35,7 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
     });
   };
 
-  const isOwned = isRedeemable === "owned";
+  const isOwned = !isLoading && isRedeemable === "owned";
 
   if (!metadata) return <></>;
 
@@ -77,12 +79,15 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
 
         <button
           onClick={() => {
+            if (isOwned) {
+              return revealCode();
+            }
             return mutateAsync();
           }}
           className={`btn btn-primary w-full ${!isRedeemable ? "btn-disabled" : ""}`}
           disabled={!isRedeemable}
         >
-          {(isPending || isLoading) && (
+          {(isPending || isLoading || isRevealing) && (
             <span className="loading loading-spinner mr-2"></span>
           )}
           {isRedeemable === true && "Redeem"}
