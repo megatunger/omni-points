@@ -25,20 +25,50 @@ const mockVouchers: Voucher[] = [
     thumbnailUrl:
       "https://www.cartridgesave.co.uk/printwhatmatters/wp-content/uploads/2021/11/ssv-blank-1024x511.png",
     points: 1000,
-    conditions:
-      "Valid for one-time use only. Cannot be combined with other offers.",
+    conditions: 'Valid for one-time use only. Cannot be combined with other offers.',
+    bid: {
+      minimumPrice: -1,
+      maximumPrice: -1,
+      offers: [],
+    }
   },
   {
-    id: "2",
-    brand: "Amazon",
-    name: "$20 Shopping Voucher",
-    validFrom: new Date("2025-04-28"),
-    validTo: new Date("2025-06-28"),
-    thumbnailUrl:
-      "https://www.cartridgesave.co.uk/printwhatmatters/wp-content/uploads/2021/11/ssv-blank-1024x511.png",
-    points: 20,
-    conditions:
-      "Valid for one-time use only. Cannot be combined with other offers.",
+    id: '2',
+    brand: 'Amazon',
+    name: '$20 Shopping Voucher',
+    validFrom: new Date('2025-04-28'),
+    validTo: new Date('2025-06-28'),
+    thumbnailUrl: 'https://www.cartridgesave.co.uk/printwhatmatters/wp-content/uploads/2021/11/ssv-blank-1024x511.png',
+    points: 2000,
+    conditions: 'Valid for one-time use only. Cannot be combined with other offers.',
+    bid: {
+      minimumPrice: -1,
+      maximumPrice: -1,
+      offers: [
+        {
+          id: 'offer1',
+          bidder: '0x1234567890abcdef',
+          amount: 1800,
+          status: 'pending',
+          createdAt: new Date('2025-04-28'),
+        },
+        {
+          id: 'offer2',
+          bidder: '0xabcdef1234567890',
+          amount: 1900,
+          status: 'accepted',
+          createdAt: new Date('2025-04-28'),
+        },
+        {
+          id: 'offer3',
+          bidder: '0xabcdef1234567890',
+          amount: 200,
+          status: 'rejected',
+          createdAt: new Date('2025-04-28'),
+        }
+
+      ],
+    }
   },
   // Add more vouchers as needed
 ];
@@ -149,7 +179,7 @@ function MarketplacePage() {
                 voucher={voucher}
                 isOwned={false}
                 onBuy={handleBuyVoucher}
-                onSell={() => {}}
+                onSell={() => { }}
               />
             ))}
           </div>
