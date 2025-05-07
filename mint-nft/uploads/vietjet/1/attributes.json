@@ -1,0 +1,24 @@
+{
+  "name": "VIETJET_VJ1137_#1",
+  "description": "01 Free ticket VJ1137 HAN-SGN 12:45-14:55, 31 May 2025.",
+  "image": "https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/vietjet/1/image.png",
+  "attributes": {
+    "0": { "trait_type": "redeemable_start", "value": 1746032400 },
+    "1": { "trait_type": "redeemable_end", "value": 1747242000 },
+    "2": { "trait_type": "redeemable", "value": true },
+    "3": { "trait_type": "expires_at", "value": 1748624400 },
+    "4": {
+      "trait_type": "secret_code",
+      "value": "6910893f61322709b32963db92ca5c88c960abc07cbf99ec300fe9b6b452d08fGEIY1qTBOlEG/6NFAxSyww==69104e7127037357fb1a0aa95bd368711c4e04b102dc874d56adcef1cc74a581"
+    },
+    "5": { "trait_type": "price", "value": 1000 }
+  },
+  "properties": {
+    "files": [
+      {
+        "type": "image/png",
+        "uri": "https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/vietjet/1/image.png"
+      }
+    ]
+  }
+}
