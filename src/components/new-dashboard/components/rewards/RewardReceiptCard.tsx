@@ -3,6 +3,7 @@ import React from "react";
 import { ArrowRightIcon } from "lucide-react";
 import useDecodeSecretCode from "@/service/rewards/useDecodeSecretCode";
 import useBurnNft from "@/service/rewards/useBurnNft";
+import { DEBUG_UI } from "@/utils/constants";
 
 const RewardReceiptCard = ({ address, name, metadata }) => {
   const { data, isLoading } = useDecodeSecretCode(address);
@@ -41,10 +42,14 @@ const RewardReceiptCard = ({ address, name, metadata }) => {
           <ArrowRightIcon className="ml-2" />
           {isLoading && <span className="loading loading-spinner mr-2"></span>}
         </button>
-        <button onClick={mutateAsync} className="btn btn-danger w-full mt-12">
-          (Debug) Burn NFT
-          {isPending && <span className="loading loading-spinner mr-2"></span>}
-        </button>
+        {DEBUG_UI && (
+          <button onClick={mutateAsync} className="btn btn-danger w-full mt-12">
+            (Debug) Burn NFT
+            {isPending && (
+              <span className="loading loading-spinner mr-2"></span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

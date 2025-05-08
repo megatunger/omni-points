@@ -5,9 +5,11 @@ import ActivitySection from "@/components/new-dashboard/components/ActivitySecti
 import { useWallet } from "@solana/wallet-adapter-react";
 import { AnimatedNumber } from "@/app/components/motion-primitives/animated-number";
 import useFetchCurrentVikkiToken from "@/service/token/useFetchCurrentVikkiToken";
+import { useRouter } from "next/navigation";
 
 const WelcomeCard = () => {
   const { connected, connecting, publicKey } = useWallet();
+  const router = useRouter();
   const { data, isLoading } = useFetchCurrentVikkiToken();
 
   const points = data?.amount || 0;
@@ -48,7 +50,12 @@ const WelcomeCard = () => {
             </span>
           </p>
         )}
-        <button className="btn btn-primary">View Your Rewards</button>
+        <button
+          className="btn btn-primary"
+          onClick={() => router.push("/wallet")}
+        >
+          View Your Rewards
+        </button>
       </div>
       <div className="flex-2/4">
         <ActivitySection />

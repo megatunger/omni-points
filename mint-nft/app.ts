@@ -35,11 +35,15 @@ async function mintNft(nft: string) {
   const metadataUri = `https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/${nft}/attributes.json`;
   const nftDetail = require(`./uploads/${nft}/attributes.json`);
 
+  // util to get the hours and minutes current
+  const date = new Date();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
   try {
     const mint = generateSigner(umi);
     await createNft(umi, {
       mint,
-      name: nftDetail.name,
+      name: nftDetail.name + `${hours}${minutes}`,
       uri: metadataUri,
       sellerFeeBasisPoints: percentAmount(0),
       creators: [{ address: creator.publicKey, verified: true, share: 100 }],

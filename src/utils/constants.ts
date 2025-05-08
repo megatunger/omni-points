@@ -27,6 +27,8 @@ export const axios = new Axios({
   },
 });
 
+export const DEBUG_UI = true;
+
 export const { rpc, sendAndConfirmTransaction } = createSolanaClient({
   urlOrMoniker: "devnet",
 });

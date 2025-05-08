@@ -10,7 +10,7 @@ import useRevealCode from "@/service/rewards/useRevealCode";
 import { useVoucherExchange } from "@/service/voucher-exchange-program/useVoucherExchange";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { OptToken } from "@/utils/constants";
+import { DEBUG_UI, OptToken } from "@/utils/constants";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useWallet } from "@solana/wallet-adapter-react";
 import RewardReceiptCard from "@/components/new-dashboard/components/rewards/RewardReceiptCard";
@@ -99,7 +99,9 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
       <div className="p-4">
         <h3 className="font-bold text-lg mb-2">{name}</h3>
         <p className="text-sm text-gray-600 mb-3">{metadata.description}</p>
-        <p className="text-sm text-gray-600 mb-3">Address: {address}</p>
+        {DEBUG_UI && (
+          <p className="text-sm text-gray-600 mb-3">Address: {address}</p>
+        )}
 
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
@@ -154,7 +156,7 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
             {(isListing || createVoucherListing.isPending) && (
               <span className="loading loading-spinner mr-2"></span>
             )}
-            List Voucher
+            Sell on P2P Market
           </button>
         )}
       </div>
