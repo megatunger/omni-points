@@ -66,13 +66,34 @@ export async function getBidPDA(
 }
 
 /**
- * Get the Escrow PDA for a bid
+ * Get the Escrow PDA for an NFT (for listings)
+ * This is used when creating a listing to hold the NFT
+ * @param nftMint The NFT mint address
+ * @param programId The Voucher Exchange program ID
+ * @returns [escrowNftPDA, escrowNftBump]
+ */
+export async function getEscrowNftPDA(
+    nftMint: PublicKey,
+    programId: PublicKey
+): Promise<[PublicKey, number]> {
+    return await PublicKey.findProgramAddress(
+        [
+            Buffer.from(ESCROW_SEED),
+            nftMint.toBuffer(),
+        ],
+        programId
+    );
+}
+
+/**
+ * Get the Escrow PDA for a bid (for bid payments)
+ * This is used when creating a bid to hold the payment tokens
  * @param bidder The bidder's public key
  * @param nftMint The NFT mint address
  * @param programId The Voucher Exchange program ID
- * @returns [escrowPDA, escrowBump]
+ * @returns [escrowBidPDA, escrowBidBump]
  */
-export async function getEscrowPDA(
+export async function getEscrowBidPDA(
     bidder: PublicKey,
     nftMint: PublicKey,
     programId: PublicKey
@@ -85,6 +106,27 @@ export async function getEscrowPDA(
         ],
         programId
     );
+}
+
+/**
+ * Get the Escrow PDA - determines correct escrow based on parameters
+ * @param first The first identifier (either bidder PublicKey or nftMint)
+ * @param second Optional second identifier (nftMint if first is bidder)
+ * @param programId The Voucher Exchange program ID
+ * @returns [escrowPDA, escrowBump]
+ */
+export async function getEscrowPDA(
+    first: PublicKey,
+    second?: PublicKey,
+    programId?: PublicKey
+): Promise<[PublicKey, number]> {
+    // If only one parameter is provided, assume it's an NFT mint for listings
+    if (!second || !programId) {
+        return getEscrowNftPDA(first, second! || programId);
+    }
+
+    // If both parameters are provided, use them for bid escrow
+    return getEscrowBidPDA(first, second, programId);
 }
 
 /**

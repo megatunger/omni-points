@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
-    TokenAccount, Mint, TokenInterface
+    TokenAccount, Mint, TokenInterface, TransferChecked, transfer_checked
 };
 use crate::state::*;
 use crate::errors::*;
@@ -14,10 +14,9 @@ pub struct CreateVoucherListing<'info> {
         payer = owner,
         space = VoucherListing::SIZE,
         seeds = [
-        VOUCHER_LISTING_SEED,
-        // Removed exchange.key().as_ref(),
-        owner.key().as_ref(),
-        nft_mint.key().as_ref()
+            VOUCHER_LISTING_SEED,
+            owner.key().as_ref(),
+            nft_mint.key().as_ref()
         ],
         bump
     )]
@@ -29,21 +28,30 @@ pub struct CreateVoucherListing<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    // Use TokenInterface::Mint instead of Mint
     pub nft_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
-        constraint = nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
-        constraint = nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner
+        constraint = owner_nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
+        constraint = owner_nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner,
+        constraint = owner_nft_account.amount == 1 @ VoucherExchangeError::InsufficientNFTAmount
     )]
-    // Use TokenInterface::TokenAccount instead of TokenAccount
-    pub nft_account: InterfaceAccount<'info, TokenAccount>,
+    pub owner_nft_account: InterfaceAccount<'info, TokenAccount>,
 
-    // Same for payment mint
+    #[account(
+        init_if_needed,
+        payer = owner,
+        seeds = [
+            ESCROW_SEED,
+            nft_mint.key().as_ref()
+        ],
+        bump,
+        token::mint = nft_mint,
+        token::authority = listing
+    )]
+    pub escrow_nft_account: InterfaceAccount<'info, TokenAccount>,
+
     pub payment_mint: InterfaceAccount<'info, Mint>,
-
-    // Use TokenInterface instead of Token
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -56,34 +64,30 @@ pub fn handler(
     // Check price is valid
     require!(price > 0, VoucherExchangeError::InvalidPrice);
 
-    // Check NFT amount
-    require!(
-        ctx.accounts.nft_account.amount == 1,
-        VoucherExchangeError::InsufficientNFTAmount
-    );
-
     // Create new listing
     let listing = &mut ctx.accounts.listing;
     listing.owner = ctx.accounts.owner.key();
     listing.nft_mint = ctx.accounts.nft_mint.key();
-    listing.nft_account = ctx.accounts.nft_account.key();
+    listing.nft_account = ctx.accounts.escrow_nft_account.key(); // Store escrow account instead
     listing.price = price;
     listing.payment_mint = ctx.accounts.payment_mint.key();
     listing.active = true;
     listing.bump = ctx.bumps.listing;
+    // Removed: listing.escrow_bump = ctx.bumps.escrow_nft_account;
 
-    // Approve authority delegation to listing PDA
-    // Use TokenInterface approve instead of token::approve
-    anchor_spl::token_interface::approve(
+    // Transfer NFT to the escrow account
+    transfer_checked(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            anchor_spl::token_interface::Approve {
-                to: ctx.accounts.nft_account.to_account_info(),
-                delegate: listing.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.owner_nft_account.to_account_info(),
+                to: ctx.accounts.escrow_nft_account.to_account_info(),
                 authority: ctx.accounts.owner.to_account_info(),
+                mint: ctx.accounts.nft_mint.to_account_info(),
             },
         ),
-        1, // Approve amount of 1 for NFT
+        1, // Amount (1 for NFT)
+        ctx.accounts.nft_mint.decimals, // Decimals
     )?;
 
     // Increment total listings

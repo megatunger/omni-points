@@ -12,6 +12,7 @@ import {
     createTransferCheckedInstruction,
     getAssociatedTokenAddress,
 } from '@solana/spl-token';
+import {OptToken} from "@/utils/constants";
 
 /**
  * API to transfer OPT tokens from user to app treasury
@@ -32,10 +33,10 @@ export async function POST(req: Request) {
 
         const connection = new Connection(process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com");
         const userPublicKey = new PublicKey(publicKey);
-        const appTreasury = new PublicKey(process.env.APP_TREASURY_ADDRESS);
+        const appTreasury = new PublicKey(process.env.APP_TREASURY_ADDRESS || "");
 
         // Get OPT token mint
-        const optMint = new PublicKey(process.env.OPT_TOKEN_MINT);
+        const optMint = new PublicKey(OptToken);
 
         // Get mint info to determine decimals
         const mintInfo = await connection.getParsedAccountInfo(optMint);
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
                 const balance = accountInfo.value.uiAmount;
                 console.log(`User OPT balance: ${balance}`);
 
-                if (balance < optAmount) {
+                if (balance ?? 0 < optAmount) {
                     return NextResponse.json({
                         error: "Insufficient OPT balance",
                         required: optAmount,
@@ -133,7 +134,6 @@ export async function POST(req: Request) {
             console.error("Error checking token balance:", error);
             return NextResponse.json({
                 error: "Failed to check token balance",
-                details: error.message
             }, { status: 500 });
         }
 
@@ -196,7 +196,6 @@ export async function POST(req: Request) {
         console.error("Error in token transfer API:", error);
         return NextResponse.json({
             error: "Failed to create token transfer transaction",
-            details: error.message
         }, { status: 500 });
     }
 }

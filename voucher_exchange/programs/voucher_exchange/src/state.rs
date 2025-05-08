@@ -80,7 +80,6 @@ impl VoucherListing {
         8 +                          // price
         32 +                         // payment_mint
         1 +                          // active
-        32 +                         // exchange
         1;                           // bump
 }
 

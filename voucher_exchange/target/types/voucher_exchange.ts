@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/voucher_exchange.json`.
  */
 export type VoucherExchange = {
-  "address": "AQgLTmiMJLXoEtmyVStnNxE6i175WdCwaXdedGD6hgSw",
+  "address": "CnupugmHFWwcaq1wnK9xfUibxX2LDaPbjQp9aA7trHjL",
   "metadata": {
     "name": "voucherExchange",
     "version": "0.1.0",
@@ -470,6 +470,36 @@ export type VoucherExchange = {
           "name": "nftMint"
         },
         {
+          "name": "ownerNftAccount",
+          "writable": true
+        },
+        {
+          "name": "escrowNftAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -564,38 +594,38 @@ export type VoucherExchange = {
             "program": {
               "kind": "const",
               "value": [
-                139,
-                202,
-                4,
-                141,
-                186,
-                78,
-                107,
-                74,
-                72,
-                192,
-                120,
-                119,
-                233,
-                79,
-                86,
-                239,
-                235,
-                47,
-                173,
-                222,
-                59,
+                175,
+                51,
                 108,
-                2,
-                126,
-                31,
-                195,
-                61,
-                213,
-                242,
-                91,
+                83,
+                212,
+                59,
+                22,
+                87,
+                148,
                 198,
-                44
+                83,
+                137,
+                247,
+                168,
+                151,
+                230,
+                38,
+                109,
+                77,
+                149,
+                53,
+                61,
+                99,
+                166,
+                143,
+                118,
+                50,
+                11,
+                85,
+                58,
+                166,
+                47
               ]
             }
           }
@@ -719,8 +749,31 @@ export type VoucherExchange = {
           "name": "nftMint"
         },
         {
-          "name": "nftAccount",
+          "name": "ownerNftAccount",
           "writable": true
+        },
+        {
+          "name": "escrowNftAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ]
+          }
         },
         {
           "name": "paymentMint"
@@ -1423,6 +1476,16 @@ export type VoucherExchange = {
       "code": 6012,
       "name": "invalidBidState",
       "msg": "Invalid bid state for this operation"
+    },
+    {
+      "code": 6013,
+      "name": "invalidEscrowOwner",
+      "msg": "Invalid escrow owner"
+    },
+    {
+      "code": 6014,
+      "name": "invalidNftAccount",
+      "msg": "Invalid nft account"
     }
   ],
   "types": [

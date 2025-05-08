@@ -7,7 +7,7 @@ pub mod constants;
 
 use instructions::*;
 
-declare_id!("AQgLTmiMJLXoEtmyVStnNxE6i175WdCwaXdedGD6hgSw");
+declare_id!("CnupugmHFWwcaq1wnK9xfUibxX2LDaPbjQp9aA7trHjL");
 
 #[program]
 pub mod voucher_exchange {

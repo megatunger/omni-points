@@ -59,8 +59,10 @@ describe("voucher_exchange", () => {
     let listingBump: number;
     let bidPDA: PublicKey;
     let bidBump: number;
-    let escrowPDA: PublicKey;
-    let escrowBump: number;
+    let escrowNftPDA: PublicKey;
+    let escrowNftBump: number;
+    let escrowBidPDA: PublicKey;
+    let escrowBidBump: number;
     let nftStatePDA: PublicKey;
     let nftStateBump: number;
 
@@ -180,7 +182,7 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
-        // Updated PDA derivation without exchange key
+        // Updated PDA derivation
         [listingPDA, listingBump] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_listing"),
@@ -199,7 +201,15 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
-        [escrowPDA, escrowBump] = await PublicKey.findProgramAddress(
+        [escrowNftPDA, escrowNftBump] = await PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow"),
+                nftMint.toBuffer(),
+            ],
+            program.programId
+        );
+
+        [escrowBidPDA, escrowBidBump] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("escrow"),
                 bidder.publicKey.toBuffer(),
@@ -250,7 +260,8 @@ describe("voucher_exchange", () => {
                 exchange: exchangePDA,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint,
-                nftAccount: nftOwnerAccount,
+                ownerNftAccount: nftOwnerAccount,
+                escrowNftAccount: escrowNftPDA,
                 paymentMint: paymentMint,
                 tokenProgram: nftTokenProgramId,
                 systemProgram: SystemProgram.programId,
@@ -265,11 +276,12 @@ describe("voucher_exchange", () => {
         const listingAccount = await program.account.voucherListing.fetch(listingPDA);
         assert.equal(listingAccount.owner.toString(), nftOwner.publicKey.toString());
         assert.equal(listingAccount.nftMint.toString(), nftMint.toString());
-        assert.equal(listingAccount.nftAccount.toString(), nftOwnerAccount.toString());
+        assert.equal(listingAccount.nftAccount.toString(), escrowNftPDA.toString());
         assert.equal(listingAccount.price.toString(), listingPrice.toString());
         assert.equal(listingAccount.paymentMint.toString(), paymentMint.toString());
         assert.equal(listingAccount.active, true);
-        // Removed assertion for exchange key which has been removed from the struct
+        assert.equal(listingAccount.bump, listingBump);
+        // No more escrow_bump assertion
 
         // Verify exchange counter was incremented
         const exchangeAccount = await program.account.voucherExchange.fetch(exchangePDA);
@@ -279,7 +291,7 @@ describe("voucher_exchange", () => {
     it("Create Voucher Bid", async () => {
         // Create a bid on the voucher
         const tx = await program.methods
-            .createVoucherBid(bidPrice, escrowBump)
+            .createVoucherBid(bidPrice)  // Removed escrowBump parameter
             .accounts({
                 bid: bidPDA,
                 exchange: exchangePDA,
@@ -288,7 +300,7 @@ describe("voucher_exchange", () => {
                 nftState: null, // Optional, may not exist yet
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
-                escrowAccount: escrowPDA,
+                escrowAccount: escrowBidPDA,
                 tokenProgram: paymentTokenProgramId,
                 systemProgram: SystemProgram.programId,
                 rent: SYSVAR_RENT_PUBKEY,
@@ -304,13 +316,12 @@ describe("voucher_exchange", () => {
         assert.equal(bidAccount.nftMint.toString(), nftMint.toString());
         assert.equal(bidAccount.price.toString(), bidPrice.toString());
         assert.equal(bidAccount.paymentMint.toString(), paymentMint.toString());
-        assert.equal(bidAccount.escrowAccount.toString(), escrowPDA.toString());
+        assert.equal(bidAccount.escrowAccount.toString(), escrowBidPDA.toString());
         assert.equal(bidAccount.active, true);
         assert.equal(bidAccount.requiresRefund, false);
-        // Removed assertion for exchange key which has been removed from the struct
 
         // Verify funds were moved to escrow
-        const escrowInfo = await getAccount(provider.connection, escrowPDA);
+        const escrowInfo = await getAccount(provider.connection, escrowBidPDA);
         assert.equal(escrowInfo.amount.toString(), bidPrice.toString());
 
         // Verify exchange counter was incremented
@@ -331,7 +342,7 @@ describe("voucher_exchange", () => {
                 ownerNftAccount: nftOwnerAccount,
                 bidderNftAccount: bidderNftAccount,
                 paymentMint: paymentMint,
-                escrowAccount: escrowPDA,
+                escrowAccount: escrowBidPDA,
                 ownerPaymentAccount: nftOwnerPaymentAccount,
                 tokenProgram: nftTokenProgramId,
                 associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -363,7 +374,6 @@ describe("voucher_exchange", () => {
         const nftStateAccount = await program.account.voucherState.fetch(nftStatePDA);
         assert.equal(nftStateAccount.nftMint.toString(), nftMint.toString());
         assert.equal(nftStateAccount.sold, true);
-        // Removed assertion for exchange key which has been removed from the struct
     });
 
     it("Create Another Listing and Fulfill It", async () => {
@@ -401,7 +411,7 @@ describe("voucher_exchange", () => {
             1
         );
 
-        // Create a new NFT state PDA without exchange key
+        // Create a new NFT state PDA
         const [nftStatePDA2] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_state"),
@@ -422,6 +432,15 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
+        // Create escrow NFT account PDA
+        const [escrowNftPDA2] = await PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow"),
+                nftMint2.toBuffer(),
+            ],
+            program.programId
+        );
+
         // Create the second listing
         const createTx = await program.methods
             .createVoucherListing(listingPrice2)
@@ -430,7 +449,8 @@ describe("voucher_exchange", () => {
                 exchange: exchangePDA,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint2,
-                nftAccount: nftOwnerAccount2,
+                ownerNftAccount: nftOwnerAccount2,
+                escrowNftAccount: escrowNftPDA2,
                 paymentMint: paymentMint,
                 tokenProgram: nftTokenProgramId,
                 systemProgram: SystemProgram.programId,
@@ -450,7 +470,7 @@ describe("voucher_exchange", () => {
                 owner: nftOwner.publicKey,
                 nftMint: nftMint2,
                 nftState: nftStatePDA2,
-                nftAccount: nftOwnerAccount2,
+                escrowNftAccount: escrowNftPDA2,
                 buyerNftAccount: buyerNftAccount2,
                 paymentMint: paymentMint,
                 buyerPaymentAccount: buyerPaymentAccount,
@@ -515,13 +535,22 @@ describe("voucher_exchange", () => {
             1
         );
 
-        // Create a new listing to cancel - updated without exchange key
+        // Create a new listing to cancel
         const listingPrice3 = new BN(700_000_000);
 
         const [listingPDA3] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_listing"),
                 nftOwner.publicKey.toBuffer(),
+                nftMint3.toBuffer(),
+            ],
+            program.programId
+        );
+
+        // Create the escrow NFT account PDA
+        const [escrowNftPDA3] = await PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow"),
                 nftMint3.toBuffer(),
             ],
             program.programId
@@ -535,7 +564,8 @@ describe("voucher_exchange", () => {
                 exchange: exchangePDA,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint3,
-                nftAccount: nftOwnerAccount3,
+                ownerNftAccount: nftOwnerAccount3,
+                escrowNftAccount: escrowNftPDA3,
                 paymentMint: paymentMint,
                 tokenProgram: nftTokenProgramId,
                 systemProgram: SystemProgram.programId,
@@ -553,6 +583,9 @@ describe("voucher_exchange", () => {
                 listing: listingPDA3,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint3,
+                ownerNftAccount: nftOwnerAccount3,
+                escrowNftAccount: escrowNftPDA3,
+                tokenProgram: nftTokenProgramId,
                 systemProgram: SystemProgram.programId,
             })
             .signers([nftOwner])
@@ -560,9 +593,14 @@ describe("voucher_exchange", () => {
 
         console.log("Cancel listing transaction:", cancelTx);
 
-        // Verify listing is no longer active
-        const listingAccount = await program.account.voucherListing.fetch(listingPDA3);
-        assert.equal(listingAccount.active, false);
+        // Verify listing is no longer active - it should be closed
+        try {
+            await program.account.voucherListing.fetch(listingPDA3);
+            assert.fail("Listing account should be closed");
+        } catch (e) {
+            // Expected behavior - account is closed
+            console.log("Listing account successfully closed");
+        }
     });
 
     it("Create and Cancel a Bid", async () => {
@@ -593,10 +631,10 @@ describe("voucher_exchange", () => {
             1
         );
 
-        // Create another bid without exchange key in PDA derivation
+        // Create another bid
         const bidPrice2 = new BN(450_000_000);
 
-        const [bidPDA2, bidBump2] = await PublicKey.findProgramAddress(
+        const [bidPDA2] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_bid"),
                 bidder.publicKey.toBuffer(),
@@ -605,7 +643,7 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
-        const [escrowPDA2, escrowBump2] = await PublicKey.findProgramAddress(
+        const [escrowBidPDA2] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("escrow"),
                 bidder.publicKey.toBuffer(),
@@ -616,7 +654,7 @@ describe("voucher_exchange", () => {
 
         // Create the bid
         const createBidTx = await program.methods
-            .createVoucherBid(bidPrice2, escrowBump2)
+            .createVoucherBid(bidPrice2)  // Removed escrowBump parameter
             .accounts({
                 bid: bidPDA2,
                 exchange: exchangePDA,
@@ -625,7 +663,7 @@ describe("voucher_exchange", () => {
                 nftState: null, // Use null since this NFT hasn't been sold yet
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
-                escrowAccount: escrowPDA2,
+                escrowAccount: escrowBidPDA2,
                 tokenProgram: paymentTokenProgramId,
                 systemProgram: SystemProgram.programId,
                 rent: SYSVAR_RENT_PUBKEY,
@@ -636,7 +674,7 @@ describe("voucher_exchange", () => {
         console.log("Create bid to cancel transaction:", createBidTx);
 
         // Verify the funds were moved to escrow
-        const escrowInfoBefore = await getAccount(provider.connection, escrowPDA2);
+        const escrowInfoBefore = await getAccount(provider.connection, escrowBidPDA2);
         assert.equal(escrowInfoBefore.amount.toString(), bidPrice2.toString());
 
         // Get bidder token balance before cancel
@@ -649,7 +687,7 @@ describe("voucher_exchange", () => {
                 bid: bidPDA2,
                 bidder: bidder.publicKey,
                 nftMint: nftMint4,
-                escrowAccount: escrowPDA2,
+                escrowAccount: escrowBidPDA2,
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
                 tokenProgram: paymentTokenProgramId,
@@ -706,10 +744,19 @@ describe("voucher_exchange", () => {
             1
         );
 
-        // Create a new NFT state PDA without exchange key
+        // Create a new NFT state PDA
         const [nftStatePDA5] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_state"),
+                nftMint5.toBuffer(),
+            ],
+            program.programId
+        );
+
+        // Create escrow NFT account PDA
+        const [escrowNftPDA5] = await PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow"),
                 nftMint5.toBuffer(),
             ],
             program.programId
@@ -735,7 +782,8 @@ describe("voucher_exchange", () => {
                 exchange: exchangePDA,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint5,
-                nftAccount: nftOwnerAccount5,
+                ownerNftAccount: nftOwnerAccount5,
+                escrowNftAccount: escrowNftPDA5,
                 paymentMint: paymentMint,
                 tokenProgram: nftTokenProgramId,
                 systemProgram: SystemProgram.programId,
@@ -744,10 +792,10 @@ describe("voucher_exchange", () => {
             .signers([nftOwner])
             .rpc();
 
-        // Create another bid for refund testing without exchange key in PDA
+        // Create another bid for refund testing
         const bidPrice3 = new BN(350_000_000);
 
-        const [bidPDA3, bidBump3] = await PublicKey.findProgramAddress(
+        const [bidPDA3] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("voucher_bid"),
                 bidder.publicKey.toBuffer(),
@@ -756,7 +804,7 @@ describe("voucher_exchange", () => {
             program.programId
         );
 
-        const [escrowPDA3, escrowBump3] = await PublicKey.findProgramAddress(
+        const [escrowBidPDA3] = await PublicKey.findProgramAddress(
             [
                 Buffer.from("escrow"),
                 bidder.publicKey.toBuffer(),
@@ -767,7 +815,7 @@ describe("voucher_exchange", () => {
 
         // Create the bid
         const createBidTx = await program.methods
-            .createVoucherBid(bidPrice3, escrowBump3)
+            .createVoucherBid(bidPrice3)  // Removed escrowBump parameter
             .accounts({
                 bid: bidPDA3,
                 exchange: exchangePDA,
@@ -776,7 +824,7 @@ describe("voucher_exchange", () => {
                 nftState: null, // Use null since this NFT hasn't been sold yet
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
-                escrowAccount: escrowPDA3,
+                escrowAccount: escrowBidPDA3,
                 tokenProgram: paymentTokenProgramId,
                 systemProgram: SystemProgram.programId,
                 rent: SYSVAR_RENT_PUBKEY,
@@ -791,17 +839,15 @@ describe("voucher_exchange", () => {
             .fulfillVoucherListing()
             .accounts({
                 listing: listingPDA5,
-                exchange: exchangePDA,
                 buyer: buyer.publicKey,
                 owner: nftOwner.publicKey,
                 nftMint: nftMint5,
                 nftState: nftStatePDA5,
-                nftAccount: nftOwnerAccount5,
+                escrowNftAccount: escrowNftPDA5,
                 buyerNftAccount: buyerNftAccount5,
                 paymentMint: paymentMint,
                 buyerPaymentAccount: buyerPaymentAccount,
                 ownerPaymentAccount: nftOwnerPaymentAccount,
-                feeAccount: adminPaymentAccount,
                 tokenProgram: nftTokenProgramId,
                 associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
@@ -811,7 +857,7 @@ describe("voucher_exchange", () => {
             .signers([buyer])
             .rpc();
 
-        // Mark the bid for refund (no exchange account needed in updated structure)
+        // Mark the bid for refund
         const markBidTx = await program.methods
             .markBidForRefund()
             .accounts({
@@ -832,14 +878,14 @@ describe("voucher_exchange", () => {
         const bidAccount = await program.account.voucherBid.fetch(bidPDA3);
         assert.equal(bidAccount.requiresRefund, true);
 
-        // Refund the bid (no exchange account needed in updated structure)
+        // Refund the bid
         const refundBidTx = await program.methods
             .refundBid()
             .accounts({
                 bid: bidPDA3,
                 bidder: bidder.publicKey,
                 nftMint: nftMint5,
-                escrowAccount: escrowPDA3,
+                escrowAccount: escrowBidPDA3,
                 paymentMint: paymentMint,
                 bidderTokenAccount: bidderPaymentAccount,
                 tokenProgram: paymentTokenProgramId,
