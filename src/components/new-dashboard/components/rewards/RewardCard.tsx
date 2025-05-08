@@ -13,6 +13,7 @@ import BN from "bn.js";
 import { OptToken } from "@/utils/constants";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useWallet } from "@solana/wallet-adapter-react";
+import RewardReceiptCard from "@/components/new-dashboard/components/rewards/RewardReceiptCard";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const { mutateAsync, isPending, data } = useRedeemReward(address);
@@ -79,6 +80,10 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
 
   if (!metadata) return <></>;
 
+  if (name.includes("RECEIPT")) {
+    return <RewardReceiptCard {...{ address, name, metadata }} />;
+  }
+
   return (
     <div className="card bg-base-100 shadow-xl rounded-xl overflow-hidden">
       <figure className="relative h-64 w-full">
@@ -92,7 +97,7 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
         )}
       </figure>
       <div className="p-4">
-        <h3 className="font-bold text-lg mb-2">{metadata.name}</h3>
+        <h3 className="font-bold text-lg mb-2">{name}</h3>
         <p className="text-sm text-gray-600 mb-3">{metadata.description}</p>
         <p className="text-sm text-gray-600 mb-3">Address: {address}</p>
 

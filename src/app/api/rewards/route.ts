@@ -11,7 +11,9 @@ import { NextResponse } from "next/server";
 import * as process from "node:process";
 
 export async function GET(request: Request) {
-  const umi = createUmi(process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com").use(mplTokenMetadata());
+  const umi = createUmi(
+    process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
+  ).use(mplTokenMetadata());
 
   // If params include `?address=...`, use that address
   // Otherwise, use the default address
@@ -30,22 +32,22 @@ export async function GET(request: Request) {
   );
 
   // Filter NFTs created by omni points
-  allNFTs = allNFTs.filter(
-    (e) =>
-      e.metadata.updateAuthority.toString() === AppKeypair.publicKey.toString(),
-  );
-
-  console.log("allNFTs", allNFTs);
+  allNFTs = allNFTs.filter((e) => {
+    return (
+      e.metadata.updateAuthority.toString() ===
+        AppKeypair.publicKey.toString() || e.metadata.name.includes("RECEIPT")
+    );
+  });
 
   const data = await Promise.all(
     allNFTs.map(async (nft) => {
       const response = await fetch(nft.metadata.uri);
       let _metadata;
-      console.log(nft.metadata.uri)
+      // console.log(nft.metadata);
       try {
         _metadata = await response.json();
       } catch (error) {
-        console.error("Error parsing JSON:", error);
+        // console.error("Error parsing JSON:", error);
         _metadata = null;
       }
       return {
@@ -56,7 +58,9 @@ export async function GET(request: Request) {
     }),
   );
   return NextResponse.json(
-    data.filter((x) => !!x.metadata && !!x?.metadata?.attributes),
+    data.filter((x) => {
+      return !!x.metadata && !!x?.metadata?.attributes;
+    }),
   );
   // return new Response("Hello, from API!");re
 }

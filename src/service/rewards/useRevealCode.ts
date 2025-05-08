@@ -1,32 +1,25 @@
-import { useMutation } from "@tanstack/react-query";
-import { axios, umi } from "@/utils/constants";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { umi } from "@/utils/constants";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { VersionedTransaction } from "@solana/web3.js";
-import { publicKey, signerIdentity } from "@metaplex-foundation/umi";
 import {
-  burnV1,
+  generateSigner,
+  percentAmount,
+  publicKey,
+} from "@metaplex-foundation/umi";
+import {
+  createNft,
   fetchDigitalAsset,
-  TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import bs58 from "bs58";
-import { useRedeemRewardType } from "@/service/rewards/useRedeemReward";
-
-export type useRevealCodeResponse = {
-  instructions: Array<{
-    programId: string;
-    keys: Array<{
-      pubkey: string;
-      isSigner: boolean;
-      isWritable: boolean;
-    }>;
-    data: string;
-  }>;
-};
+import { useFetchRewardsKey } from "@/service/rewards/useFetchRewards";
+import useBurnNft from "@/service/rewards/useBurnNft";
 
 function useRevealCode(address: string) {
   const wallet = useWallet();
+  const queryClient = useQueryClient();
   const connection = useConnection();
+  const { mutateAsync: burnNft } = useBurnNft(address);
   return useMutation({
     mutationFn: async () => {
       const { publicKey: walletAdress } = wallet;
@@ -35,30 +28,34 @@ function useRevealCode(address: string) {
       }
       const assetId = publicKey(address);
       const asset = await fetchDigitalAsset(umi, assetId);
+      const nftDetail = asset.metadata;
 
-      const mint = asset.mint;
-      const owner = asset.publicKey;
+      umi.use(walletAdapterIdentity(wallet));
+      const mint = generateSigner(umi);
+      const txMintReceipt = await createNft(umi, {
+        mint,
+        name: "RECEIPT_" + nftDetail.name,
+        uri: nftDetail.uri,
+        sellerFeeBasisPoints: percentAmount(0),
+        creators: [
+          {
+            address: publicKey(walletAdress),
+            verified: true,
+            share: 100,
+          },
+        ],
+        // @ts-ignore
+      }).sendAndConfirm(umi);
 
-      const { data } = await axios.post<any>("/rewards/reveal", {
-        walletAddress: publicKey?.toString(),
-        nftAddress: address,
+      const explorerMintReceiptUrl = `https://explorer.solana.com/tx/${bs58.encode(txMintReceipt.signature)}?cluster=devnet`;
+      console.log(`Explorer URL: ${explorerMintReceiptUrl}`);
+      // window.open(explorerMintReceiptUrl, "_blank");
+
+      await burnNft();
+      await queryClient.invalidateQueries({
+        queryKey: useFetchRewardsKey,
+        exact: false,
       });
-
-      const tx = VersionedTransaction.deserialize(
-        Buffer.from(data?.serializedTx, "base64"),
-      );
-
-      await wallet?.signTransaction?.(tx);
-
-      console.log(tx);
-      // umi.use(walletAdapterIdentity(wallet));
-      // const txb = await burnV1(umi, {
-      //   mint: mint,
-      //   tokenStandard: TokenStandard.NonFungible,
-      // });
-      // const txSig = await txb.sendAndConfirm(umi);
-      // const explorerUrl = `https://explorer.solana.com/tx/${bs58.encode(txSig.signature)}?cluster=devnet`;
-      // window.open(explorerUrl, "_blank");
     },
   });
 }

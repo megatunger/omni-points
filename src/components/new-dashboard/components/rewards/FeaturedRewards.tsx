@@ -29,7 +29,7 @@ const FeaturedRewards = () => {
       <h3 className="text-xl font-bold mb-4">Featured Rewards</h3>
       <AnimatedGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {_rewards?.map((reward, idx) => (
-          <RewardCard key={reward.address} {...reward} />
+          <RewardCard key={reward.address + reward.name} {...reward} />
         ))}
       </AnimatedGroup>
     </div>

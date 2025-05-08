@@ -50,6 +50,7 @@ function useRedeemReward(address: string) {
         window.open(explorerUrl, "_blank");
         await queryClient.invalidateQueries({
           queryKey: useFetchRewardsKey,
+          exact: false,
         });
       } catch (error) {
         console.log(error);

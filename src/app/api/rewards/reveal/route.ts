@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
-import {
-  createSignerFromKeypair,
-  generateSigner,
-  keypairIdentity,
-  percentAmount,
-  publicKey,
-} from "@metaplex-foundation/umi";
-import { AppKeypair, umi } from "@/utils/constants";
-import {
-  createNft,
-  fetchDigitalAsset,
-  mplTokenMetadata,
-} from "@metaplex-foundation/mpl-token-metadata";
-import { PublicKey } from "@solana/web3.js";
-import { VietjetCollection } from "../../../../../mint-nft/constants";
+import { publicKey } from "@metaplex-foundation/umi";
+import { umi } from "@/utils/constants";
+import { fetchDigitalAsset } from "@metaplex-foundation/mpl-token-metadata";
 import axios from "axios";
-import { base64 } from "@metaplex-foundation/umi-serializers-encodings";
+import _ from "lodash";
+import secret from "../../../../../secrets/wallet.json";
+import SimpleCrypto from "simple-crypto-js";
 
 export async function POST(req: Request) {
   try {
@@ -28,35 +18,27 @@ export async function POST(req: Request) {
       );
     }
 
+    const userWallet = publicKey(walletAddress);
     const assetId = publicKey(nftAddress);
     const asset = await fetchDigitalAsset(umi, assetId);
     const data = asset.metadata;
 
     const { data: offChain } = await axios.get(data.uri);
 
-    const creator = createSignerFromKeypair(umi, AppKeypair);
-    umi.use(keypairIdentity(creator));
-    umi.use(mplTokenMetadata());
-    const mint = generateSigner(umi);
-    const txb = await createNft(umi, {
-      mint,
-      name: "RECEIPT_" + data.name,
-      uri: data.uri,
-      sellerFeeBasisPoints: percentAmount(0),
-      creators: [{ address: creator.publicKey, verified: true, share: 100 }],
-      isCollection: true,
-      // @ts-ignore
-      collection: { key: new PublicKey(VietjetCollection), verified: false },
-    });
-    // await txb.useV0().setLatestBlockhash(umi);
-    const tx = (await txb.setLatestBlockhash(umi)).build(umi);
+    if (data.updateAuthority !== userWallet.toString()) {
+      return NextResponse.json(
+        { error: "You are not the owner of this NFT" },
+        { status: 403 },
+      );
+    }
+    const secret_code = _.find(offChain.attributes, {
+      trait_type: "secret_code",
+    }).value;
 
-    const rawTx = umi.transactions.serialize(tx);
-
-    const serializedTx = Buffer.from(rawTx).toString("base64");
+    const simpleCrypto = new SimpleCrypto(secret);
 
     return NextResponse.json({
-      serializedTx,
+      secretCode: simpleCrypto.decrypt(secret_code),
     });
   } catch (error) {
     console.error("Error revealing reward:", error);
