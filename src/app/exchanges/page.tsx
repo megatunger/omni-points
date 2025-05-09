@@ -3,21 +3,17 @@
 import React, { useState, useEffect } from "react";
 import { useVoucherExchange } from "@/service/voucher-exchange-program/useVoucherExchange";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
-import { OptToken } from "@/utils/constants";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
 import {
-  ArrowRightIcon,
-  RefreshCwIcon,
-  ShoppingCartIcon,
-  WalletIcon,
-  XIcon,
-  Loader2Icon,
-} from "lucide-react";
-import useFetchRewards from "@/service/rewards/useFetchRewards"; // Import the rewards fetching hook
+  getAssociatedTokenAddress,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { RefreshCwIcon, ShoppingCartIcon, WalletIcon } from "lucide-react";
+import useFetchRewards from "@/service/rewards/useFetchRewards";
 import MyListingCard from "@/components/new-dashboard/components/MyListingCard";
 import VoucherListingCard from "@/components/new-dashboard/components/VoucherListingCard";
+import { toast } from "react-hot-toast";
+import { connection } from "@/utils/constants";
 
 const ExchangesPage = () => {
   const [activeTab, setActiveTab] = useState("marketplace");
@@ -26,7 +22,7 @@ const ExchangesPage = () => {
   const [isLoadingMarketplace, setIsLoadingMarketplace] = useState(true);
   const [isLoadingMyListings, setIsLoadingMyListings] = useState(true);
   const [error, setError] = useState(null);
-  const [metadataMap, setMetadataMap] = useState({}); // Map to store NFT metadata by address
+  const [metadataMap, setMetadataMap] = useState({});
 
   // Fetch rewards to get metadata
   const { data: rewardsData, isLoading: isLoadingRewards } = useFetchRewards();
@@ -36,6 +32,7 @@ const ExchangesPage = () => {
     fetchListingsByOwner,
     fulfillVoucherListing,
     cancelVoucherListing,
+    getExchangeAccount,
   } = useVoucherExchange();
 
   const wallet = useWallet();
@@ -148,54 +145,69 @@ const ExchangesPage = () => {
 
   const handlePurchase = async (listing) => {
     if (!publicKey) {
-      console.error("Wallet not connected");
+      toast.error("Please connect your wallet to make a purchase");
       return;
     }
 
+    // Show loading toast
+    const loadingToast = toast.loading("Processing your purchase...");
+
     try {
+      // Normalize the data to handle different naming conventions
       const owner = listing.data.owner;
-      // Support both naming conventions
       const nftMint = listing.data.nft_mint || listing.data.nftMint;
       const paymentMint = listing.data.payment_mint || listing.data.paymentMint;
+      const paymentMintInfo = await connection.getAccountInfo(paymentMint);
+      const isToken2022 =
+        paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
 
-      // Create buyer NFT account
-      const buyerNftAccount = await getAssociatedTokenAddress(
-        nftMint,
-        publicKey,
-      );
-
-      // Get payment accounts
-      const buyerPaymentAccount = await getAssociatedTokenAddress(
-        paymentMint,
-        publicKey,
-      );
-
-      const ownerPaymentAccount = await getAssociatedTokenAddress(
-        paymentMint,
-        owner,
-      );
-
-      await fulfillVoucherListing.mutateAsync({
+      // Execute the transaction with updated parameters
+      const signature = await fulfillVoucherListing.mutateAsync({
         owner,
         nftMint,
-        buyerNftAccount,
         paymentMint,
-        buyerPaymentAccount,
-        ownerPaymentAccount,
+        isToken2022,
       });
+
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success(
+        `Purchase successful! Signature: ${signature.substring(0, 8)}...`,
+      );
 
       // Refresh listings after purchase
       fetchMarketplaceListings();
     } catch (error) {
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+
       console.error("Error purchasing voucher:", error);
+
+      // Provide user-friendly error messages
+      if (error.message.includes("InsufficientFunds")) {
+        toast.error("You don't have enough tokens to complete this purchase.");
+      } else if (error.message.includes("ListingNotActive")) {
+        toast.error(
+          "This listing is no longer active. Please refresh the page.",
+        );
+      } else if (error.message.includes("InsufficientNFTAmount")) {
+        toast.error(
+          "There was an issue with the NFT escrow. Please try again later.",
+        );
+      } else {
+        toast.error(`Purchase failed: ${error.message || "Unknown error"}`);
+      }
     }
   };
 
   const handleCancelListing = async (listing) => {
     if (!publicKey) {
-      console.error("Wallet not connected");
+      toast.error("Please connect your wallet to cancel a listing");
       return;
     }
+
+    // Show loading toast
+    const loadingToast = toast.loading("Canceling your listing...");
 
     try {
       // Support both naming conventions
@@ -205,10 +217,22 @@ const ExchangesPage = () => {
         nftMint,
       });
 
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Listing canceled successfully!");
+
       // Refresh listings after cancellation
       fetchUserListings();
+      // Also refresh marketplace in case the user switches tabs
+      fetchMarketplaceListings();
     } catch (error) {
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+
       console.error("Error canceling listing:", error);
+      toast.error(
+        `Failed to cancel listing: ${error.message || "Unknown error"}`,
+      );
     }
   };
 
@@ -250,20 +274,20 @@ const ExchangesPage = () => {
       </div>
 
       <div className="tabs tabs-boxed mb-6">
-        <a
+        <button
           className={`tab ${activeTab === "marketplace" ? "tab-active" : ""}`}
           onClick={() => setActiveTab("marketplace")}
         >
           <ShoppingCartIcon size={16} className="mr-2" />
           Marketplace
-        </a>
-        <a
+        </button>
+        <button
           className={`tab ${activeTab === "my-listings" ? "tab-active" : ""}`}
           onClick={() => setActiveTab("my-listings")}
         >
           <WalletIcon size={16} className="mr-2" />
           My Listings
-        </a>
+        </button>
       </div>
 
       {error && (

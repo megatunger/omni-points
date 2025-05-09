@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useFetchRewardsType } from "@/service/rewards/useFetchRewards";
 import useEligibleToBuy from "@/service/token/useEligibleToBuy";
@@ -11,7 +11,6 @@ import { useVoucherExchange } from "@/service/voucher-exchange-program/useVouche
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { DEBUG_UI, OptToken } from "@/utils/constants";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useWallet } from "@solana/wallet-adapter-react";
 import RewardReceiptCard from "@/components/new-dashboard/components/rewards/RewardReceiptCard";
 

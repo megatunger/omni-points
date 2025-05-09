@@ -102,199 +102,71 @@ export type VoucherExchange = {
           }
         },
         {
-          "name": "ownerNftAccount",
+          "name": "escrowNftAccount",
           "writable": true
         },
         {
-          "name": "bidderNftAccount",
+          "name": "listing",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "bidder"
-              },
-              {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
+                  118,
+                  111,
+                  117,
+                  99,
+                  104,
                   101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
+                  114,
                   95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  108,
+                  105,
+                  115,
+                  116,
+                  105,
+                  110,
+                  103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
               },
               {
                 "kind": "account",
                 "path": "nftMint"
               }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
+            ]
           }
+        },
+        {
+          "name": "bidderNftAccount",
+          "writable": true
         },
         {
           "name": "paymentMint",
           "writable": true
         },
         {
-          "name": "escrowAccount",
+          "name": "escrowPaymentAccount",
           "writable": true
         },
         {
           "name": "ownerPaymentAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "paymentMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          "writable": true
+        },
+        {
+          "name": "exchange",
+          "writable": true
         },
         {
           "name": "tokenProgram"
+        },
+        {
+          "name": "tokenNftProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "associatedTokenProgram",
@@ -303,14 +175,6 @@ export type VoucherExchange = {
         {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        },
-        {
-          "name": "clock",
-          "address": "SysvarC1ock11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -890,98 +754,12 @@ export type VoucherExchange = {
           }
         },
         {
-          "name": "nftAccount",
+          "name": "escrowNftAccount",
           "writable": true
         },
         {
           "name": "buyerNftAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "buyer"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          "writable": true
         },
         {
           "name": "paymentMint",
@@ -993,96 +771,18 @@ export type VoucherExchange = {
         },
         {
           "name": "ownerPaymentAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "paymentMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          "writable": true
+        },
+        {
+          "name": "exchange",
+          "writable": true
         },
         {
           "name": "tokenProgram"
+        },
+        {
+          "name": "tokenNftProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "associatedTokenProgram",
@@ -1091,14 +791,6 @@ export type VoucherExchange = {
         {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        },
-        {
-          "name": "clock",
-          "address": "SysvarC1ock11111111111111111111111111111111"
         }
       ],
       "args": []

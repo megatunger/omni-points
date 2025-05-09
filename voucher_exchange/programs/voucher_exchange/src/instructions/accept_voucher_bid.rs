@@ -1,152 +1,210 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
-    TokenAccount, Mint, TokenInterface,
-    TransferChecked, transfer_checked
+    TokenAccount as TokenAccountInterface, Mint as MintInterface, TokenInterface,
+    TransferChecked, transfer_checked, CloseAccount, close_account
 };
+use anchor_spl::token::{Token, Mint, TokenAccount}; // Add standard Token and Mint imports
 use anchor_spl::associated_token::AssociatedToken;
 use crate::state::*;
 use crate::errors::*;
 use crate::constants::*;
 
 #[derive(Accounts)]
+#[instruction(params: AcceptVoucherBidParams)]  // Add this line to derive Bumps
 pub struct AcceptVoucherBid<'info> {
     #[account(
         mut,
         seeds = [
-        VOUCHER_BID_SEED,
-        bidder.key().as_ref(),
-        nft_mint.key().as_ref()
+            VOUCHER_BID_SEED,
+            bidder.key().as_ref(),
+            nft_mint.key().as_ref()
         ],
         bump = bid.bump,
-        constraint = bid.active == true @ VoucherExchangeError::BidNotActive
+        constraint = bid.active == true @ VoucherExchangeError::BidNotActive,
+        close = owner
     )]
     pub bid: Account<'info, VoucherBid>,
 
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: Account of the bidder (used for PDA derivation)
+    /// CHECK: Account of the bidder
     #[account(mut, constraint = bidder.key() == bid.bidder @ VoucherExchangeError::NotBidder)]
     pub bidder: AccountInfo<'info>,
 
+    // Changed to regular Mint instead of InterfaceAccount
     #[account(mut)]
-    pub nft_mint: InterfaceAccount<'info, Mint>,
+    pub nft_mint: Account<'info, Mint>,
 
-    // Create or update NFT state
     #[account(
         init_if_needed,
         payer = owner,
         space = VoucherState::SIZE,
-        seeds = [
-        VOUCHER_STATE_SEED,
-        nft_mint.key().as_ref()
-        ],
+        seeds = [VOUCHER_STATE_SEED, nft_mint.key().as_ref()],
         bump
     )]
     pub nft_state: Account<'info, VoucherState>,
 
     #[account(
         mut,
-        constraint = owner_nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
-        constraint = owner_nft_account.owner == owner.key() @ VoucherExchangeError::NotNFTOwner
+        constraint = escrow_nft_account.mint == nft_mint.key() @ VoucherExchangeError::InvalidNFTAccount,
+        constraint = escrow_nft_account.key() == listing.nft_account @ VoucherExchangeError::InvalidNFTAccount
     )]
-    pub owner_nft_account: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init_if_needed,
-        payer = owner,
-        associated_token::mint = nft_mint,
-        associated_token::authority = bidder
-    )]
-    pub bidder_nft_account: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub payment_mint: InterfaceAccount<'info, Mint>,
+    pub escrow_nft_account: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        constraint = escrow_account.key() == bid.escrow_account @ VoucherExchangeError::InvalidBidState,
-        constraint = escrow_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice
+        seeds = [
+            VOUCHER_LISTING_SEED,
+            owner.key().as_ref(),
+            nft_mint.key().as_ref()
+        ],
+        bump = listing.bump,
+        constraint = listing.active == true @ VoucherExchangeError::ListingNotActive,
+        constraint = listing.owner == owner.key() @ VoucherExchangeError::NotListingOwner,
+        close = owner
     )]
-    pub escrow_account: InterfaceAccount<'info, TokenAccount>,
+    pub listing: Account<'info, VoucherListing>,
 
     #[account(
-        init_if_needed,
-        payer = owner,
-        associated_token::mint = payment_mint,
-        associated_token::authority = owner
+        mut,
+        constraint = bidder_nft_account.mint == nft_mint.key(),
+        constraint = bidder_nft_account.owner == bidder.key(),
     )]
-    pub owner_payment_account: InterfaceAccount<'info, TokenAccount>,
+    pub bidder_nft_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub payment_mint: InterfaceAccount<'info, MintInterface>,
+
+    #[account(
+        mut,
+        constraint = escrow_payment_account.key() == bid.escrow_account @ VoucherExchangeError::InvalidBidState,
+        constraint = escrow_payment_account.mint == payment_mint.key() @ VoucherExchangeError::InvalidPrice
+    )]
+    pub escrow_payment_account: InterfaceAccount<'info, TokenAccountInterface>,
+
+    #[account(
+        mut,
+        constraint = owner_payment_account.mint == payment_mint.key(),
+        constraint = owner_payment_account.owner == owner.key(),
+    )]
+    pub owner_payment_account: InterfaceAccount<'info, TokenAccountInterface>,
+
+    #[account(mut)]
+    pub exchange: Account<'info, VoucherExchange>,
 
     pub token_program: Interface<'info, TokenInterface>,
+
+    // Changed to standard Token program
+    pub token_nft_program: Program<'info, Token>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-    pub clock: Sysvar<'info, Clock>,
 }
+
+// Add this struct to derive Bumps
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct AcceptVoucherBidParams {}
 
 pub fn handler(
     ctx: Context<AcceptVoucherBid>,
 ) -> Result<()> {
-    // Check NFT amount
+    // Check NFT amount in escrow
     require!(
-        ctx.accounts.owner_nft_account.amount == 1,
+        ctx.accounts.escrow_nft_account.amount == 1,
         VoucherExchangeError::InsufficientNFTAmount
     );
 
-    // Calculate fee
+    // Get price from bid
     let price = ctx.accounts.bid.price;
-    let seller_amount = price;
 
-    // Get escrow seeds
+    // Transfer payment from escrow to seller
+    let (bid_bump, listing_bump) = (ctx.accounts.bid.bump, ctx.accounts.listing.bump);
     let bidder_key = ctx.accounts.bidder.key();
+    let owner_key = ctx.accounts.owner.key();
     let nft_mint_key = ctx.accounts.nft_mint.key();
-    let escrow_bump = ctx.accounts.bid.escrow_bump;
 
-    let escrow_seeds = &[
-        ESCROW_SEED,
-        // Removed exchange_key.as_ref(),
+    let payment_token_program = ctx.accounts.token_program.to_account_info();
+
+    // Get bid seeds for signing
+    let bid_seeds = &[
+        VOUCHER_BID_SEED,
         bidder_key.as_ref(),
         nft_mint_key.as_ref(),
-        &[escrow_bump],
+        &[bid_bump],
     ];
 
-    let signer_seeds = &[&escrow_seeds[..]];
+    let bid_signer_seeds = &[&bid_seeds[..]];
 
-    // 1. Transfer payment from escrow to seller
+    // 1. Transfer payment from escrow to owner
     transfer_checked(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
+            payment_token_program.clone(),
             TransferChecked {
-                from: ctx.accounts.escrow_account.to_account_info(),
+                from: ctx.accounts.escrow_payment_account.to_account_info(),
                 mint: ctx.accounts.payment_mint.to_account_info(),
                 to: ctx.accounts.owner_payment_account.to_account_info(),
-                authority: ctx.accounts.escrow_account.to_account_info(),
+                authority: ctx.accounts.bid.to_account_info(),
             },
-            signer_seeds,
+            bid_signer_seeds,
         ),
-        seller_amount,
+        price,
         ctx.accounts.payment_mint.decimals,
     )?;
 
+    // 2. Close escrow payment account and return rent to bidder
+    close_account(
+        CpiContext::new_with_signer(
+            payment_token_program,
+            CloseAccount {
+                account: ctx.accounts.escrow_payment_account.to_account_info(),
+                destination: ctx.accounts.bidder.to_account_info(), // Rent goes back to the bidder
+                authority: ctx.accounts.bid.to_account_info(),
+            },
+            bid_signer_seeds,
+        )
+    )?;
 
-    // 3. Transfer NFT from seller to bidder
+    // Get listing seeds for signing
+    let listing_seeds = &[
+        VOUCHER_LISTING_SEED,
+        owner_key.as_ref(),
+        nft_mint_key.as_ref(),
+        &[listing_bump],
+    ];
+
+    let listing_signer_seeds = &[&listing_seeds[..]];
+
+    let nft_token_program = ctx.accounts.token_nft_program.to_account_info();
+
+    // 3. Transfer NFT from escrow to bidder
     transfer_checked(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
+        CpiContext::new_with_signer(
+            nft_token_program.clone(),
             TransferChecked {
-                from: ctx.accounts.owner_nft_account.to_account_info(),
+                from: ctx.accounts.escrow_nft_account.to_account_info(),
                 mint: ctx.accounts.nft_mint.to_account_info(),
                 to: ctx.accounts.bidder_nft_account.to_account_info(),
-                authority: ctx.accounts.owner.to_account_info(),
+                authority: ctx.accounts.listing.to_account_info(),
             },
+            listing_signer_seeds,
         ),
         1,
         ctx.accounts.nft_mint.decimals,
     )?;
 
-    // Mark bid as inactive
-    ctx.accounts.bid.active = false;
+    // 4. Close the escrow NFT account and send rent back to the owner
+    close_account(
+        CpiContext::new_with_signer(
+            nft_token_program,
+            CloseAccount {
+                account: ctx.accounts.escrow_nft_account.to_account_info(),
+                destination: ctx.accounts.owner.to_account_info(), // Rent goes back to the owner
+                authority: ctx.accounts.listing.to_account_info(),
+            },
+            listing_signer_seeds,
+        )
+    )?;
 
     // Update NFT state to mark as sold
     let nft_state = &mut ctx.accounts.nft_state;
@@ -154,6 +212,11 @@ pub fn handler(
     nft_state.sold = true;
     nft_state.latest_sale_timestamp = Clock::get()?.unix_timestamp;
     nft_state.bump = ctx.bumps.nft_state;
+
+    // Update exchange statistics
+    let exchange = &mut ctx.accounts.exchange;
+    exchange.total_bids = exchange.total_bids.checked_sub(1).unwrap_or(0);
+    exchange.total_listings = exchange.total_listings.checked_sub(1).unwrap_or(0);
 
     Ok(())
 }
