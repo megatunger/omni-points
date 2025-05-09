@@ -18,6 +18,10 @@ const RewardReceiptCard = ({ address, name, metadata }) => {
       //   "_blank",
       // );
     }
+    if (name.includes("ANA_MANDARA")) {
+      const url = `https://www.book-secure.com/index.php?s=results&property=vnkha30848&arrival=2025-05-09&departure=2025-05-10&code=SOVICO&adults1=3&children1=0&locale=vi_VN&currency=VND&stid=khx1wjjsz&showPromotions=1&Hotelnames=ASIAVNHTLAnaMandaraC&hname=ASIAVNHTLAnaMandaraC&Clusternames=ASIAVNHTLAnaMandaraC&cluster=ASIAVNHTLAnaMandaraC&redir=BIZ-so5523q0o4&rt=1665633011`;
+      navigator.clipboard.writeText(url);
+    }
   };
   return (
     <div className="card bg-base-100 shadow-xl rounded-xl overflow-hidden">

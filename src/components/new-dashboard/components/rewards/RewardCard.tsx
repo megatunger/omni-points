@@ -13,9 +13,11 @@ import BN from "bn.js";
 import { DEBUG_UI, OptToken } from "@/utils/constants";
 import { useWallet } from "@solana/wallet-adapter-react";
 import RewardReceiptCard from "@/components/new-dashboard/components/rewards/RewardReceiptCard";
+import useBurnNft from "@/service/rewards/useBurnNft";
 
 const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
   const { mutateAsync, isPending, data } = useRedeemReward(address);
+  const { mutateAsync: burnNft, isPending: isBurning } = useBurnNft(address);
   const { mutateAsync: revealCode, isPending: isRevealing } =
     useRevealCode(address);
   const { createVoucherListing } = useVoucherExchange();
@@ -144,7 +146,6 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
             </span>
           )}
         </button>
-
         {/* Add List Voucher button when the user owns the voucher */}
         {isOwned && (
           <button
@@ -156,6 +157,14 @@ const RewardCard = ({ address, name, metadata }: useFetchRewardsType[0]) => {
               <span className="loading loading-spinner mr-2"></span>
             )}
             Sell on P2P Market
+          </button>
+        )}
+        {DEBUG_UI && (
+          <button onClick={burnNft} className="btn btn-danger w-full mt-12">
+            (Debug) Burn NFT
+            {isBurning && (
+              <span className="loading loading-spinner mr-2"></span>
+            )}
           </button>
         )}
       </div>
