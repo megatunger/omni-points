@@ -1,8 +1,10 @@
-// VoucherListingCard component definition (in the same file)
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { ArrowRightIcon } from "lucide-react";
 import useDetailNft from "@/service/rewards/useDetailNft";
+import VoucherDetailModal from "./VoucherDetailModal";
 
 const VoucherListingCard = ({
   listing,
@@ -18,25 +20,16 @@ const VoucherListingCard = ({
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [localMetadata, setLocalMetadata] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const wallet = useWallet();
   const { publicKey } = wallet;
 
   useEffect(() => {
-    // If we received metadata from props, use it
-    // if (data) {
-    //   setLocalMetadata(metadata);
-    //   setIsLoading(false);
-    //   return;
-    // }
-
-    // Otherwise, create fallback metadata
     const createFallbackMetadata = async () => {
       try {
-        // Create placeholder metadata if none was provided from the rewards data
         setLocalMetadata({
           name: data?.name,
           description: data?.metadata?.description,
-          // Use a default image that doesn't require external domains
           image: data?.metadata?.image,
           attributes: data?.metadata?.attributes,
         });
@@ -50,7 +43,8 @@ const VoucherListingCard = ({
     createFallbackMetadata();
   }, [listing, data]);
 
-  const handlePurchase = () => {
+  const handlePurchase = (e) => {
+    e.stopPropagation(); // Prevent opening modal when clicking purchase
     setProcessingId(listing.address.toString());
     onPurchase(listing).finally(() => {
       setProcessingId(null);
@@ -74,9 +68,15 @@ const VoucherListingCard = ({
   };
 
   const price = getAttribute("price") || Number(listing.data.price) / 10 ** 9;
-  const redeemableStart = new Date(getAttribute("redeemable_start") * 1000);
-  const redeemableEnd = new Date(getAttribute("redeemable_end") * 1000);
-  const expiresAt = new Date(getAttribute("expires_at") * 1000);
+  const redeemableStart = getAttribute("redeemable_start")
+    ? new Date(getAttribute("redeemable_start") * 1000)
+    : new Date();
+  const redeemableEnd = getAttribute("redeemable_end")
+    ? new Date(getAttribute("redeemable_end") * 1000)
+    : new Date();
+  const expiresAt = getAttribute("expires_at")
+    ? new Date(getAttribute("expires_at") * 1000)
+    : new Date();
 
   const formatDate = (date) => {
     return date.toLocaleDateString("en-US", {
@@ -112,76 +112,75 @@ const VoucherListingCard = ({
   )?.toString();
 
   return (
-    <div className="card bg-base-100 shadow-xl rounded-xl overflow-hidden">
-      <figure className="relative h-64 w-full">
-        {localMetadata.image ? (
-          // Use img tag as a fallback to prevent Next.js image errors
-          <img
-            src={localMetadata.image}
-            alt={localMetadata.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          // Fallback if no image
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <div className="text-gray-400 text-lg">Voucher Image</div>
-          </div>
-        )}
-      </figure>
-      <div className="p-4">
-        <h3 className="font-bold text-lg mb-2">{localMetadata.name}</h3>
-        <p className="text-sm text-gray-600 mb-3">
-          {localMetadata.description}
-        </p>
-        <p className="text-sm text-gray-600 mb-1 truncate">
-          <span className="font-semibold">NFT:</span>{" "}
-          {nftMintAddr?.substring(0, 16)}...
-        </p>
-        <p className="text-sm text-gray-600 mb-3 truncate">
-          <span className="font-semibold">Seller:</span>{" "}
-          {listing.data.owner.toString().substring(0, 16)}...
-        </p>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Price:</span>
-            <span className="font-semibold">{price} points</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Valid from:</span>
-            <span>{formatDate(redeemableStart)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Valid until:</span>
-            <span>{formatDate(redeemableEnd)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Expires:</span>
-            <span>{formatDate(expiresAt)}</span>
-          </div>
-        </div>
-
-        <button
-          onClick={handlePurchase}
-          className={`btn btn-primary w-full ${!walletConnected || isOwnListing ? "btn-disabled" : ""}`}
-          disabled={!walletConnected || isOwnListing || isProcessing}
-        >
-          {isProcessing ? (
-            <span className="loading loading-spinner mr-2"></span>
-          ) : null}
-
-          {!walletConnected ? (
-            "Connect Wallet to Purchase"
-          ) : isOwnListing ? (
-            "This is Your Listing"
+    <>
+      <div
+        className="card bg-base-100 shadow-xl rounded-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-shadow"
+        onClick={() => setIsModalOpen(true)}
+      >
+        <figure className="relative h-64 w-full">
+          {localMetadata.image ? (
+            <img
+              src={localMetadata.image}
+              alt={localMetadata.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <span className="flex flex-row items-center justify-center">
-              Purchase Voucher <ArrowRightIcon className="ml-2" />
-            </span>
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <div className="text-gray-400 text-lg">Voucher Image</div>
+            </div>
           )}
-        </button>
+        </figure>
+        <div className="p-4">
+          <h3 className="font-bold text-lg mb-2">{localMetadata.name}</h3>
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            {localMetadata.description}
+          </p>
+
+          <div className="flex justify-between items-center mb-3">
+            <span className="font-semibold text-lg">{price} points</span>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(true);
+              }}
+            >
+              Details
+            </button>
+          </div>
+
+          <button
+            onClick={handlePurchase}
+            className={`btn btn-primary w-full ${!walletConnected || isOwnListing ? "btn-disabled" : ""}`}
+            disabled={!walletConnected || isOwnListing || isProcessing}
+          >
+            {isProcessing ? (
+              <span className="loading loading-spinner mr-2"></span>
+            ) : null}
+
+            {!walletConnected ? (
+              "Connect Wallet to Purchase"
+            ) : isOwnListing ? (
+              "This is Your Listing"
+            ) : (
+              <span className="flex flex-row items-center justify-center">
+                Purchase Voucher <ArrowRightIcon className="ml-2" />
+              </span>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Detail Modal */}
+      {isModalOpen && (
+        <VoucherDetailModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          listing={listing}
+          metadata={localMetadata}
+        />
+      )}
+    </>
   );
 };
 

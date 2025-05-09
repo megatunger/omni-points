@@ -72,36 +72,6 @@ export type VoucherExchange = {
           "writable": true
         },
         {
-          "name": "nftState",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ]
-          }
-        },
-        {
           "name": "escrowNftAccount",
           "writable": true
         },
@@ -428,73 +398,6 @@ export type VoucherExchange = {
           "name": "nftMint"
         },
         {
-          "name": "nftState",
-          "optional": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                175,
-                51,
-                108,
-                83,
-                212,
-                59,
-                22,
-                87,
-                148,
-                198,
-                83,
-                137,
-                247,
-                168,
-                151,
-                230,
-                38,
-                109,
-                77,
-                149,
-                53,
-                61,
-                99,
-                166,
-                143,
-                118,
-                50,
-                11,
-                85,
-                58,
-                166,
-                47
-              ]
-            }
-          }
-        },
-        {
           "name": "paymentMint"
         },
         {
@@ -724,36 +627,6 @@ export type VoucherExchange = {
           "writable": true
         },
         {
-          "name": "nftState",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ]
-          }
-        },
-        {
           "name": "escrowNftAccount",
           "writable": true
         },
@@ -876,35 +749,6 @@ export type VoucherExchange = {
         {
           "name": "exchange",
           "writable": true
-        },
-        {
-          "name": "nftState",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ]
-          }
         },
         {
           "name": "nftMint"
@@ -1088,19 +932,6 @@ export type VoucherExchange = {
         25,
         138
       ]
-    },
-    {
-      "name": "voucherState",
-      "discriminator": [
-        232,
-        95,
-        171,
-        70,
-        70,
-        253,
-        73,
-        236
-      ]
     }
   ],
   "errors": [
@@ -1277,30 +1108,6 @@ export type VoucherExchange = {
           {
             "name": "active",
             "type": "bool"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "voucherState",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "nftMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "sold",
-            "type": "bool"
-          },
-          {
-            "name": "latestSaleTimestamp",
-            "type": "i64"
           },
           {
             "name": "bump",

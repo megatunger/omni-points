@@ -14,16 +14,6 @@ pub struct MarkBidForRefund<'info> {
     #[account(mut)]
     pub exchange: Account<'info, VoucherExchange>,
 
-    #[account(
-        seeds = [
-        VOUCHER_STATE_SEED,
-        nft_mint.key().as_ref()
-        ],
-        bump = nft_state.bump,
-        constraint = nft_state.sold == true @ VoucherExchangeError::NFTAlreadySold,
-    )]
-    pub nft_state: Account<'info, VoucherState>,
-
     pub nft_mint: InterfaceAccount<'info, Mint>,
 
     // Include bidder's public key for PDA derivation
@@ -49,8 +39,6 @@ pub struct MarkBidForRefund<'info> {
 pub fn handler(
     ctx: Context<MarkBidForRefund>,
 ) -> Result<()> {
-    // Ensure we have a valid NFT state that's already been sold
-    require!(ctx.accounts.nft_state.sold, VoucherExchangeError::NFTAlreadySold);
 
     // Log which bid we're marking for refund (using bidder address and NFT mint for identification)
     msg!(

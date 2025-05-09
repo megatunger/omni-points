@@ -31,17 +31,6 @@ pub struct CreateVoucherBid<'info> {
 
     pub nft_mint: InterfaceAccount<'info, Mint>,
 
-    // NFT state is optional (might not exist yet)
-    #[account(
-        seeds = [
-        VOUCHER_STATE_SEED,
-        nft_mint.key().as_ref()
-        ],
-        bump,
-        seeds::program = crate::id(),
-    )]
-    pub nft_state: Option<Account<'info, VoucherState>>,
-
     pub payment_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -83,11 +72,6 @@ pub fn handler(
         ctx.accounts.bidder_token_account.amount >= price,
         VoucherExchangeError::InsufficientFunds
     );
-
-    // Check if NFT has been sold already
-    if let Some(nft_state) = &ctx.accounts.nft_state {
-        require!(!nft_state.sold, VoucherExchangeError::NFTAlreadySold);
-    }
 
     // Transfer token to escrow using transfer_checked
     anchor_spl::token_interface::transfer_checked(

@@ -66,36 +66,6 @@
           "writable": true
         },
         {
-          "name": "nft_state",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ]
-          }
-        },
-        {
           "name": "escrow_nft_account",
           "writable": true
         },
@@ -422,73 +392,6 @@
           "name": "nft_mint"
         },
         {
-          "name": "nft_state",
-          "optional": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                175,
-                51,
-                108,
-                83,
-                212,
-                59,
-                22,
-                87,
-                148,
-                198,
-                83,
-                137,
-                247,
-                168,
-                151,
-                230,
-                38,
-                109,
-                77,
-                149,
-                53,
-                61,
-                99,
-                166,
-                143,
-                118,
-                50,
-                11,
-                85,
-                58,
-                166,
-                47
-              ]
-            }
-          }
-        },
-        {
           "name": "payment_mint"
         },
         {
@@ -718,36 +621,6 @@
           "writable": true
         },
         {
-          "name": "nft_state",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ]
-          }
-        },
-        {
           "name": "escrow_nft_account",
           "writable": true
         },
@@ -870,35 +743,6 @@
         {
           "name": "exchange",
           "writable": true
-        },
-        {
-          "name": "nft_state",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  111,
-                  117,
-                  99,
-                  104,
-                  101,
-                  114,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ]
-          }
         },
         {
           "name": "nft_mint"
@@ -1082,19 +926,6 @@
         25,
         138
       ]
-    },
-    {
-      "name": "VoucherState",
-      "discriminator": [
-        232,
-        95,
-        171,
-        70,
-        70,
-        253,
-        73,
-        236
-      ]
     }
   ],
   "errors": [
@@ -1271,30 +1102,6 @@
           {
             "name": "active",
             "type": "bool"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "VoucherState",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "nft_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "sold",
-            "type": "bool"
-          },
-          {
-            "name": "latest_sale_timestamp",
-            "type": "i64"
           },
           {
             "name": "bump",
