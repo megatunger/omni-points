@@ -15,7 +15,7 @@ import { mockStorage } from "@metaplex-foundation/umi-storage-mock";
 import * as fs from "fs";
 import { encryptVoucherData } from "./utils";
 import { PublicKey } from "@solana/web3.js";
-import { VietjetCollection } from "./constants";
+import { PhuLongCollection, VietjetCollection } from "./constants";
 
 const secret = require("../secrets/wallet.json");
 
@@ -49,7 +49,9 @@ async function mintNft(nft: string) {
       creators: [{ address: creator.publicKey, verified: true, share: 100 }],
       isCollection: true,
       // @ts-ignore
-      collection: { key: new PublicKey(VietjetCollection), verified: false },
+      // collection: { key: new PublicKey(VietjetCollection), verified: false },
+      // @ts-ignore
+      collection: { key: new PublicKey(PhuLongCollection), verified: false },
     }).sendAndConfirm(umi);
     console.log(`Created NFT: ${mint.publicKey.toString()}`);
   } catch (e) {
