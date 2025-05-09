@@ -58,7 +58,8 @@ async function mintNft(nft: string) {
 }
 
 async function main() {
-  await mintNft("vietjet/1");
+  // await mintNft("vietjet/1");
+  await mintNft("phulong/1");
 }
 
 main();

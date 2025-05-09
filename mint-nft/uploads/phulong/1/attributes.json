@@ -1,0 +1,24 @@
+{
+  "name": "ANA_MANDARA_CAM_RANH_#5",
+  "description": "3 free nights stay at Ana Mandara Cam Ranh",
+  "image": "https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/vietjet/1/image.png",
+  "attributes": {
+    "0": { "trait_type": "redeemable_start", "value": 1746550800 },
+    "1": { "trait_type": "redeemable_end", "value": 1751821200 },
+    "2": { "trait_type": "redeemable", "value": true },
+    "3": { "trait_type": "expires_at", "value": 1751302800 },
+    "4": {
+      "trait_type": "secret_code",
+      "value": "177ef187564e98c6d0cd709e87a1a390965a5fa69b29116ff410c14dcc9da94fCE2X4yoro4XMz2i22RwKhg==5b1930931f8044bea70d72bc5a9b3e91a9cdafe85c09b86ae5cc027f33ec2fd1"
+    },
+    "5": { "trait_type": "price", "value": 1500 }
+  },
+  "properties": {
+    "files": [
+      {
+        "type": "image/png",
+        "uri": "https://raw.githubusercontent.com/megatunger/omni-points/refs/heads/main/mint-nft/uploads/phulong/1/image.png"
+      }
+    ]
+  }
+}

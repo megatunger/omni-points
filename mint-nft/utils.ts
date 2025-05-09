@@ -5,7 +5,7 @@ const secret = require("../secrets/wallet.json");
 
 const simpleCrypto = new SimpleCrypto(secret);
 
-function generateSecureVoucherCode(length = 12) {
+export function generateSecureVoucherCode(length = 12) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const bytes = randomBytes(length);
   return Array.from(bytes)

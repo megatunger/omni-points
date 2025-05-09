@@ -54,4 +54,5 @@ const generateCollection = async (brand: string) => {
   console.log("✅ Finished successfully!");
 };
 
-generateCollection("vietjet");
+// generateCollection("vietjet");
+generateCollection("phulong");

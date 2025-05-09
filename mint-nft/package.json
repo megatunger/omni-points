@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node app",
-    "start:create-collections": "ts-node create-collections"
+    "start:create-collections": "ts-node create-collections",
+    "start:generate-code": "ts-node generate-code"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
