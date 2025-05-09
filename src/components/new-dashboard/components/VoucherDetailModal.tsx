@@ -28,6 +28,14 @@ const VoucherDetailModal = ({
   const [activeTab, setActiveTab] = useState<"details" | "bids">("details");
   const [bids, setBids] = useState([]);
   const [isLoadingBids, setIsLoadingBids] = useState(false);
+  // Add state variables for tracking loading states
+  const [loadingAcceptBids, setLoadingAcceptBids] = useState<
+    Record<string, boolean>
+  >({});
+  const [loadingCancelBids, setLoadingCancelBids] = useState<
+    Record<string, boolean>
+  >({});
+
   const { publicKey, wallet } = useWallet();
   const { acceptVoucherBid, cancelVoucherBid, fetchBidsByNftMint, program } =
     useVoucherExchange();
@@ -61,6 +69,9 @@ const VoucherDetailModal = ({
   const handleAcceptBid = async (bidderAddress: string) => {
     if (!nftMint || !isOwner || !publicKey) return;
 
+    // Set loading state for this specific bid
+    setLoadingAcceptBids((prev) => ({ ...prev, [bidderAddress]: true }));
+
     try {
       // Get bid information
       const bidder = new PublicKey(bidderAddress);
@@ -93,17 +104,29 @@ const VoucherDetailModal = ({
     } catch (error) {
       console.error("Error accepting bid:", error);
       toast.error("Failed to accept bid. Please try again.");
+    } finally {
+      // Clear loading state for this specific bid
+      setLoadingAcceptBids((prev) => {
+        const newState = { ...prev };
+        delete newState[bidderAddress];
+        return newState;
+      });
     }
   };
 
-  const handleCancelBid = async (paymentMint: string) => {
+  const handleCancelBid = async (paymentMint: string, bidAddress: string) => {
     if (!nftMint || !publicKey) return;
+
+    // Set loading state for this specific bid
+    setLoadingCancelBids((prev) => ({ ...prev, [bidAddress]: true }));
 
     try {
       await cancelVoucherBid.mutateAsync({
         paymentMint: new PublicKey(paymentMint),
         nftMint: new PublicKey(nftMint),
       });
+
+      toast.success("Bid cancelled successfully!");
 
       // Refresh bids after cancellation
       loadBids();
@@ -115,6 +138,13 @@ const VoucherDetailModal = ({
     } catch (error) {
       console.error("Error cancelling bid:", error);
       toast.error("Failed to cancel bid. Please try again.");
+    } finally {
+      // Clear loading state for this specific bid
+      setLoadingCancelBids((prev) => {
+        const newState = { ...prev };
+        delete newState[bidAddress];
+        return newState;
+      });
     }
   };
 
@@ -275,9 +305,8 @@ const VoucherDetailModal = ({
                     isOwner={isOwner}
                     onAcceptBid={handleAcceptBid}
                     onCancelBid={handleCancelBid}
-                    isPending={
-                      acceptVoucherBid.isPending || cancelVoucherBid.isPending
-                    }
+                    loadingAcceptBids={loadingAcceptBids}
+                    loadingCancelBids={loadingCancelBids}
                     currentWalletAddress={publicKey?.toString()}
                   />
                 </div>
