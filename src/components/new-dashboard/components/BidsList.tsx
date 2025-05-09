@@ -20,8 +20,9 @@ interface BidsListProps {
   isLoading: boolean;
   isOwner: boolean;
   onAcceptBid: (bidderAddress: string) => void;
-  onCancelBid?: (paymentMint: string) => void;
-  isPending: boolean;
+  onCancelBid?: (paymentMint: string, bidAddress: string) => void;
+  loadingAcceptBids: Record<string, boolean>; // Map of bidder address -> loading state
+  loadingCancelBids: Record<string, boolean>; // Map of bid address -> loading state
   currentWalletAddress?: string;
 }
 
@@ -31,7 +32,8 @@ const BidsList: React.FC<BidsListProps> = ({
   isOwner,
   onAcceptBid,
   onCancelBid,
-  isPending,
+  loadingAcceptBids,
+  loadingCancelBids,
   currentWalletAddress,
 }) => {
   if (isLoading) {
@@ -75,11 +77,17 @@ const BidsList: React.FC<BidsListProps> = ({
   return (
     <div className="space-y-4">
       {sortedBids.map((bid) => {
-        const userIsBidder = isBidder(bid.data.bidder.toString());
+        const bidAddress = bid.address.toString();
+        const bidderAddress = bid.data.bidder.toString();
+        const userIsBidder = isBidder(bidderAddress);
+
+        // Check if this specific bid is in a loading state
+        const isAcceptLoading = !!loadingAcceptBids[bidderAddress];
+        const isCancelLoading = !!loadingCancelBids[bidAddress];
 
         return (
           <div
-            key={bid.address}
+            key={bidAddress}
             className={`border ${userIsBidder ? "border-primary" : "border-base-300"} rounded-lg p-4`}
           >
             <div className="flex justify-between items-center mb-2">
@@ -90,8 +98,8 @@ const BidsList: React.FC<BidsListProps> = ({
                     <span className="font-medium text-primary">You</span>
                   ) : (
                     <>
-                      {bid.data.bidder.toString().substring(0, 6)}...
-                      {bid.data.bidder.toString().slice(-4)}
+                      {bidderAddress.substring(0, 6)}...
+                      {bidderAddress.slice(-4)}
                     </>
                   )}
                 </span>
@@ -102,7 +110,7 @@ const BidsList: React.FC<BidsListProps> = ({
             </div>
 
             <div className="text-sm text-gray-500 flex justify-between">
-              <span>Bid ID: {bid.address.toString().substring(0, 6)}...</span>
+              <span>Bid ID: {bidAddress.substring(0, 6)}...</span>
               <span>
                 {bid.data.active ? (
                   <span className="text-green-500">Active</span>
@@ -116,11 +124,11 @@ const BidsList: React.FC<BidsListProps> = ({
             {isOwner && bid.data.active && (
               <div className="mt-3">
                 <button
-                  onClick={() => onAcceptBid(bid.data.bidder)}
-                  disabled={isPending}
+                  onClick={() => onAcceptBid(bidderAddress)}
+                  disabled={isAcceptLoading}
                   className="btn btn-primary btn-sm w-full"
                 >
-                  {isPending ? (
+                  {isAcceptLoading ? (
                     <>
                       <span className="loading loading-spinner loading-xs"></span>
                       Processing...
@@ -136,11 +144,11 @@ const BidsList: React.FC<BidsListProps> = ({
             {userIsBidder && bid.data.active && onCancelBid && (
               <div className="mt-3">
                 <button
-                  onClick={() => onCancelBid(bid.data.paymentMint)}
-                  disabled={isPending}
+                  onClick={() => onCancelBid(bid.data.paymentMint, bidAddress)}
+                  disabled={isCancelLoading}
                   className="btn btn-outline btn-error btn-sm w-full"
                 >
-                  {isPending ? (
+                  {isCancelLoading ? (
                     <>
                       <span className="loading loading-spinner loading-xs"></span>
                       Cancelling...

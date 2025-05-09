@@ -19,6 +19,10 @@ const ExchangesPage = () => {
   const [error, setError] = useState(null);
   const [metadataMap, setMetadataMap] = useState({});
 
+  // Add individual loading states for each button
+  const [loadingPurchases, setLoadingPurchases] = useState({});
+  const [loadingCancellations, setLoadingCancellations] = useState({});
+
   // Fetch rewards to get metadata
   const { data: rewardsData, isLoading: isLoadingRewards } = useFetchRewards();
 
@@ -115,8 +119,11 @@ const ExchangesPage = () => {
       return;
     }
 
-    // Show loading toast
-    const loadingToast = toast.loading("Processing your purchase...");
+    // Store the listing address for tracking loading state
+    const listingAddress = listing.address.toString();
+
+    // Set loading state for this specific listing
+    setLoadingPurchases((prev) => ({ ...prev, [listingAddress]: true }));
 
     try {
       // Normalize the data to handle different naming conventions
@@ -132,8 +139,7 @@ const ExchangesPage = () => {
         paymentMint,
       });
 
-      // Dismiss loading toast and show success
-      toast.dismiss(loadingToast);
+      // Show success
       toast.success(
         `Purchase successful! Signature: ${signature.substring(0, 8)}...`,
       );
@@ -141,21 +147,30 @@ const ExchangesPage = () => {
       // Refresh listings after purchase
       fetchMarketplaceListings();
     } catch (error) {
-      // Dismiss loading toast and show error
-      toast.dismiss(loadingToast);
-
+      // Show error
       console.error("Error purchasing voucher:", error);
+      toast.error("Purchase failed: " + (error.message || "Unknown error"));
+    } finally {
+      // Clear loading state for this specific listing
+      setLoadingPurchases((prev) => {
+        const newState = { ...prev };
+        delete newState[listingAddress];
+        return newState;
+      });
     }
   };
 
-  const handleCancelListing = async (listing: any) => {
+  const handleCancelListing = async (listing) => {
     if (!publicKey) {
       toast.error("Please connect your wallet to cancel a listing");
       return;
     }
 
-    // Show loading toast
-    const loadingToast = toast.loading("Canceling your listing...");
+    // Store the listing address for tracking loading state
+    const listingAddress = listing.address.toString();
+
+    // Set loading state for this specific listing
+    setLoadingCancellations((prev) => ({ ...prev, [listingAddress]: true }));
 
     try {
       // Support both naming conventions
@@ -165,8 +180,7 @@ const ExchangesPage = () => {
         nftMint,
       });
 
-      // Dismiss loading toast and show success
-      toast.dismiss(loadingToast);
+      // Show success
       toast.success("Listing canceled successfully!");
 
       // Refresh listings after cancellation
@@ -174,10 +188,16 @@ const ExchangesPage = () => {
       // Also refresh marketplace in case the user switches tabs
       fetchMarketplaceListings();
     } catch (error) {
-      // Dismiss loading toast and show error
-      toast.dismiss(loadingToast);
-
+      // Show error
       console.error("Error canceling listing:", error);
+      toast.error("Cancellation failed: " + (error.message || "Unknown error"));
+    } finally {
+      // Clear loading state for this specific listing
+      setLoadingCancellations((prev) => {
+        const newState = { ...prev };
+        delete newState[listingAddress];
+        return newState;
+      });
     }
   };
 
@@ -257,22 +277,23 @@ const ExchangesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeListings.map((listing: any) => {
+              {activeListings.map((listing) => {
                 // Get the NFT mint from the listing
                 const nftMint = listing.data.nft_mint || listing.data.nftMint;
                 const nftMintString = nftMint?.toString();
+                const listingAddress = listing.address.toString();
 
                 // Find metadata for this NFT if available
                 const metadata = metadataMap[nftMintString] || null;
 
                 return (
                   <VoucherListingCard
-                    key={listing.address.toString()}
+                    key={listingAddress}
                     listing={listing}
                     metadata={metadata}
                     onPurchase={handlePurchase}
                     walletConnected={!!publicKey}
-                    isPending={fulfillVoucherListing.isPending}
+                    isPending={loadingPurchases[listingAddress]} // Use individual loading state
                   />
                 );
               })}
@@ -305,21 +326,22 @@ const ExchangesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myListings.map((listing: any) => {
+              {myListings.map((listing) => {
                 // Get the NFT mint from the listing
                 const nftMint = listing.data.nft_mint || listing.data.nftMint;
                 const nftMintString = nftMint?.toString();
+                const listingAddress = listing.address.toString();
 
                 // Find metadata for this NFT if available
                 const metadata = metadataMap[nftMintString] || null;
 
                 return (
                   <MyListingCard
-                    key={listing.address.toString()}
+                    key={listingAddress}
                     listing={listing}
                     metadata={metadata}
                     onCancel={handleCancelListing}
-                    isPending={cancelVoucherListing.isPending}
+                    isPending={loadingCancellations[listingAddress]} // Use individual loading state
                   />
                 );
               })}
