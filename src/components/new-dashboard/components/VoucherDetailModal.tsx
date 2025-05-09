@@ -105,8 +105,6 @@ const VoucherDetailModal = ({
         nftMint: new PublicKey(nftMint),
       });
 
-      console.log(paymentMint)
-
       // Refresh bids after cancellation
       loadBids();
 
@@ -163,7 +161,10 @@ const VoucherDetailModal = ({
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-5 p-4 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-5 p-4 overflow-y-auto"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
+    >
       <div className="relative bg-base-100 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-auto">
         {/* Header */}
         <div className="sticky top-0 bg-base-100 p-6 border-b border-base-300 flex justify-between items-center z-10">
