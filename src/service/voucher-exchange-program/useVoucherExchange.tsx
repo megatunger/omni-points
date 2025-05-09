@@ -10,7 +10,6 @@ import {
   getBidPDA,
   getEscrowNftPDA,
   getEscrowBidPDA,
-  getNftStatePDA,
 } from "./pda";
 import {
   PublicKey,
@@ -25,6 +24,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
+  MintLayout,
 } from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ import toast from "react-hot-toast";
 import { useCluster } from "../cluster/use-cluster-provider";
 import { useAnchorProvider } from "../solana/use-solana-provider";
 import bs58 from "bs58";
+import { connection } from "@/utils/constants";
 
 // Types and Interfaces
 export interface VoucherExchange {
@@ -152,105 +153,6 @@ export function useVoucherExchange() {
       },
       ...DEFAULT_QUERY_OPTIONS,
       enabled: !!bidder && !!nftMint,
-    });
-  };
-
-  // Get NFT state by mint
-  const getNftState = (nftMint: PublicKey) => {
-    return useQuery({
-      queryKey: ["get-nft-state", { nftMint: nftMint?.toBase58(), cluster }],
-      queryFn: async () => {
-        const [nftStatePDA] = await getNftStatePDA(
-          nftMint,
-          VOUCHER_EXCHANGE_PROGRAM_ID,
-        );
-        return program.account.voucherState.fetch(nftStatePDA);
-      },
-      ...DEFAULT_QUERY_OPTIONS,
-      enabled: !!nftMint,
-    });
-  };
-
-  // Check if an NFT has been sold
-  const isNftSold = (nftMint: PublicKey) => {
-    return useQuery({
-      queryKey: ["is-nft-sold", { nftMint: nftMint?.toBase58(), cluster }],
-      queryFn: async () => {
-        try {
-          const [nftStatePDA] = await getNftStatePDA(
-            nftMint,
-            VOUCHER_EXCHANGE_PROGRAM_ID,
-          );
-          const nftState =
-            await program.account.voucherState.fetch(nftStatePDA);
-          return nftState.sold;
-        } catch (error) {
-          // If the account doesn't exist, the NFT hasn't been sold
-          return false;
-        }
-      },
-      ...DEFAULT_QUERY_OPTIONS,
-      enabled: !!nftMint,
-    });
-  };
-
-  // Get NFT sale info
-  const getNftSaleInfo = (nftMint: PublicKey) => {
-    return useQuery({
-      queryKey: [
-        "get-nft-sale-info",
-        { nftMint: nftMint?.toBase58(), cluster },
-      ],
-      queryFn: async () => {
-        try {
-          const [nftStatePDA] = await getNftStatePDA(
-            nftMint,
-            VOUCHER_EXCHANGE_PROGRAM_ID,
-          );
-          const nftState =
-            await program.account.voucherState.fetch(nftStatePDA);
-
-          if (!nftState.sold) {
-            return { timestamp: null, price: null };
-          }
-
-          // Get listings and bids for this NFT mint
-          const listings = await fetchListingsByNftMint(nftMint);
-          const completedListing = listings.find(
-            (listing: { data: { active: boolean } }) => !listing.data.active,
-          );
-
-          if (completedListing) {
-            return {
-              timestamp: nftState.latestSaleTimestamp,
-              price: completedListing.data.price,
-            };
-          }
-
-          // If no listing found, check bids
-          const bids = await fetchBidsByNftMint(nftMint);
-          const acceptedBid = bids.find(
-            (bid: { data: { active: boolean; requiresRefund: boolean } }) =>
-              !bid.data.active && !bid.data.requiresRefund,
-          );
-
-          if (acceptedBid) {
-            return {
-              timestamp: nftState.latestSaleTimestamp,
-              price: acceptedBid.data.price,
-            };
-          }
-
-          return {
-            timestamp: nftState.latestSaleTimestamp,
-            price: null,
-          };
-        } catch (error) {
-          return { timestamp: null, price: null };
-        }
-      },
-      ...DEFAULT_QUERY_OPTIONS,
-      enabled: !!nftMint,
     });
   };
 
@@ -424,28 +326,6 @@ export function useVoucherExchange() {
     }
   };
 
-  // Fetch all sold NFTs
-  const fetchAllSoldNfts = async () => {
-    try {
-      const nftStates = await program.account.voucherState.all([
-        {
-          memcmp: {
-            offset: 8 + 32, // Skip discriminator and nftMint
-            bytes: bs58.encode(Buffer.from([1])), // 1 = true (sold)
-          },
-        },
-      ]);
-
-      return nftStates.map((state: { publicKey: PublicKey; account: any }) => ({
-        address: state.publicKey,
-        data: state.account as VoucherState,
-      }));
-    } catch (error) {
-      console.error("Error fetching all sold NFTs:", error);
-      throw error;
-    }
-  };
-
   // --- MUTATIONS ---
 
   // Initialize Exchange Mutation
@@ -508,9 +388,7 @@ export function useVoucherExchange() {
         throw error;
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Exchange initialized: ${signature.substring(0, 8)}...`);
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full initialize exchange error:", error);
       const errorMessage = error.message || "Unknown error";
@@ -533,13 +411,6 @@ export function useVoucherExchange() {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
-        console.log(
-          "Creating listing for NFT:",
-          nftMint.toString(),
-          "with price:",
-          price.toString(),
-        );
-
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
         const [listingPDA] = await getListingPDA(
           publicKey,
@@ -649,12 +520,7 @@ export function useVoucherExchange() {
         }
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Listing created: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full listing error:", error);
       const errorMessage = error.message || "Unknown error";
@@ -671,22 +537,35 @@ export function useVoucherExchange() {
     mutationFn: async ({
       nftMint,
       paymentMint,
-      bidderTokenAccount,
       price,
     }: {
       nftMint: PublicKey;
       paymentMint: PublicKey;
-      bidderTokenAccount: PublicKey;
-      price: BN;
+      price: number;
     }) => {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
-        console.log(
-          "Creating bid for NFT:",
-          nftMint.toString(),
-          "with price:",
-          price.toString(),
+        const paymentMintInfo = await connection.getAccountInfo(paymentMint);
+        const isToken2022 =
+          paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
+
+        let decimals = 9; // Default to 9 if we can't determine
+        try {
+          if (paymentMintInfo && paymentMintInfo.data) {
+            // Parse mint data to extract decimals
+            const mintData = MintLayout.decode(paymentMintInfo.data);
+            decimals = mintData.decimals;
+          }
+        } catch (error) {
+          console.error("Error parsing mint data:", error);
+        }
+
+        const bidderTokenAccount = await getAssociatedTokenAddress(
+          paymentMint,
+          publicKey,
+          false,
+          isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
         );
 
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
@@ -696,8 +575,7 @@ export function useVoucherExchange() {
           VOUCHER_EXCHANGE_PROGRAM_ID,
         );
 
-        // Using bidder-specific escrow PDA for bids
-        const [escrowBidPDA] = await getEscrowBidPDA(
+        const [escrowBidPDA, escrowBump] = await getEscrowBidPDA(
           publicKey,
           nftMint,
           VOUCHER_EXCHANGE_PROGRAM_ID,
@@ -725,32 +603,20 @@ export function useVoucherExchange() {
           );
         }
 
-        // Check if NFT state exists
-        let nftState: PublicKey | null = null;
-        try {
-          const [nftStatePDA] = await getNftStatePDA(
-            nftMint,
-            VOUCHER_EXCHANGE_PROGRAM_ID,
-          );
-          await program.account.voucherState.fetch(nftStatePDA);
-          nftState = nftStatePDA;
-        } catch (error) {
-          // NFT state doesn't exist yet, that's OK
-          nftState = null;
-        }
-
+        const bidPriceBN = new BN(price * 10 ** decimals);
         const tx = await program.methods
-          .createVoucherBid(price) // Removed escrowBump parameter
+          .createVoucherBid(bidPriceBN, escrowBump)
           .accounts({
             bid: bidPDA,
             exchange: exchangePDA,
             bidder: publicKey,
             nftMint: nftMint,
-            nftState: nftState,
             paymentMint: paymentMint,
             bidderTokenAccount: bidderTokenAccount,
             escrowAccount: escrowBidPDA,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: isToken2022
+              ? TOKEN_2022_PROGRAM_ID
+              : TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
           })
@@ -768,7 +634,6 @@ export function useVoucherExchange() {
         const signature = await connection.sendRawTransaction(
           signedTx.serialize(),
         );
-        console.log(`Transaction sent: ${signature}`);
 
         // Wait for confirmation
         const confirmation = await connection.confirmTransaction(
@@ -781,10 +646,6 @@ export function useVoucherExchange() {
         );
 
         if (confirmation.value.err) {
-          console.error(
-            "Transaction failed after confirmation:",
-            confirmation.value.err,
-          );
           throw new Error(
             `Transaction confirmed but failed: ${JSON.stringify(confirmation.value.err)}`,
           );
@@ -793,34 +654,11 @@ export function useVoucherExchange() {
         return signature;
       } catch (error) {
         console.error("Error in createVoucherBid:", error);
-
-        // Add specific context to the error
-        if (error.message.includes("0x1")) {
-          throw new Error(
-            "Insufficient funds for transaction. Please add more SOL to your wallet.",
-          );
-        } else if (error.message.includes("insufficient funds")) {
-          throw new Error(
-            "Insufficient token balance. Please make sure you have enough tokens for this bid.",
-          );
-        } else {
-          throw error;
-        }
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Bid created: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full bid error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to create bid: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -831,16 +669,17 @@ export function useVoucherExchange() {
       bidder,
       nftMint,
       paymentMint,
-      isToken2022,
     }: {
       bidder: PublicKey;
       nftMint: PublicKey;
       paymentMint: PublicKey;
-      isToken2022: boolean;
     }) => {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
+        const paymentMintInfo = await connection.getAccountInfo(paymentMint);
+        const isToken2022 =
+          paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
         // Get all required addresses
         const bidderNftAccount = await getAssociatedTokenAddress(
           nftMint,
@@ -876,11 +715,6 @@ export function useVoucherExchange() {
         );
         const [escrowBidPDA] = await getEscrowBidPDA(
           bidder,
-          nftMint,
-          VOUCHER_EXCHANGE_PROGRAM_ID,
-        );
-
-        const [nftStatePDA] = await getNftStatePDA(
           nftMint,
           VOUCHER_EXCHANGE_PROGRAM_ID,
         );
@@ -987,7 +821,6 @@ export function useVoucherExchange() {
             owner: publicKey,
             bidder: bidder,
             nftMint: nftMint,
-            nftState: nftStatePDA,
             escrowNftAccount: escrowNftPDA,
             listing: listingPDA,
             bidderNftAccount: bidderNftAccount,
@@ -1028,10 +861,6 @@ export function useVoucherExchange() {
         );
 
         if (confirmation.value.err) {
-          console.error(
-            "Transaction failed after confirmation:",
-            confirmation.value.err,
-          );
           throw new Error(
             `Transaction confirmed but failed: ${JSON.stringify(confirmation.value.err)}`,
           );
@@ -1040,63 +869,11 @@ export function useVoucherExchange() {
         return signature;
       } catch (error) {
         console.error("Error in acceptVoucherBid:", error);
-
-        // Extract more detailed error information if available
-        if (error instanceof Error && "logs" in error) {
-          console.error("Transaction logs:", error.logs);
-        }
-
-        // Add specific context to the error based on custom error codes
-        if (error.message.includes("BidNotActive")) {
-          throw new Error(
-            "This bid is no longer active. It may have been canceled or already accepted.",
-          );
-        } else if (error.message.includes("NotListingOwner")) {
-          throw new Error(
-            "You are not the owner of this NFT and cannot accept this bid.",
-          );
-        } else if (error.message.includes("ListingNotActive")) {
-          throw new Error(
-            "Your listing is not active. Please create a listing first.",
-          );
-        } else if (error.message.includes("InsufficientNFTAmount")) {
-          throw new Error(
-            "The escrow account does not have the required NFT amount.",
-          );
-        } else if (error.message.includes("unknown account")) {
-          // Try to extract the missing account address
-          const missingAccountMatch = error.message.match(
-            /unknown account ([A-Za-z0-9]+)/,
-          );
-          if (missingAccountMatch && missingAccountMatch[1]) {
-            throw new Error(
-              `Missing account detected: ${missingAccountMatch[1]}. Please try again.`,
-            );
-          } else {
-            throw new Error(
-              "Transaction failed due to a missing account. Please try again.",
-            );
-          }
-        } else if (error.message.includes("recentBlockhash")) {
-          throw new Error("Transaction blockhash issue. Please try again.");
-        } else {
-          throw error;
-        }
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Bid accepted: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full accept bid error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to accept bid: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1108,16 +885,18 @@ export function useVoucherExchange() {
       owner,
       nftMint,
       paymentMint,
-      isToken2022,
     }: {
       owner: PublicKey;
       nftMint: PublicKey;
       paymentMint: PublicKey;
-      isToken2022: boolean;
     }) => {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
+        const paymentMintInfo = await connection.getAccountInfo(paymentMint);
+        const isToken2022 =
+          paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
+
         // Get all required addresses
         const buyerPaymentAccount = await getAssociatedTokenAddress(
           paymentMint,
@@ -1143,10 +922,6 @@ export function useVoucherExchange() {
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
         const [listingPDA] = await getListingPDA(
           owner,
-          nftMint,
-          VOUCHER_EXCHANGE_PROGRAM_ID,
-        );
-        const [nftStatePDA] = await getNftStatePDA(
           nftMint,
           VOUCHER_EXCHANGE_PROGRAM_ID,
         );
@@ -1232,7 +1007,6 @@ export function useVoucherExchange() {
             buyer: publicKey,
             owner: owner,
             nftMint: nftMint,
-            nftState: nftStatePDA,
             escrowNftAccount: escrowNftPDA,
             buyerNftAccount: buyerNftAccount,
             paymentMint: paymentMint,
@@ -1281,57 +1055,11 @@ export function useVoucherExchange() {
         return signature;
       } catch (error) {
         console.error("Error in fulfillVoucherListing:", error);
-
-        // Extract more detailed error information if available
-        if (error instanceof Error && "logs" in error) {
-          console.error("Transaction logs:", error.logs);
-        }
-
-        // Add specific error handling based on error codes
-        if (error.message.includes("ListingNotActive")) {
-          throw new Error("This listing is no longer active.");
-        } else if (error.message.includes("InsufficientFunds")) {
-          throw new Error(
-            "You don't have enough tokens to complete this purchase.",
-          );
-        } else if (error.message.includes("InsufficientNFTAmount")) {
-          throw new Error(
-            "The NFT escrow account doesn't have the required NFT amount.",
-          );
-        } else if (error.message.includes("unknown account")) {
-          // Try to extract the missing account address
-          const missingAccountMatch = error.message.match(
-            /unknown account ([A-Za-z0-9]+)/,
-          );
-          if (missingAccountMatch && missingAccountMatch[1]) {
-            throw new Error(
-              `Missing account detected: ${missingAccountMatch[1]}. Please try again.`,
-            );
-          } else {
-            throw new Error(
-              "Transaction failed due to a missing account. Please try again.",
-            );
-          }
-        } else if (error.message.includes("recentBlockhash")) {
-          throw new Error("Transaction blockhash issue. Please try again.");
-        } else {
-          throw error;
-        }
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Purchase successful: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full fulfill listing error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to purchase listing: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1342,7 +1070,6 @@ export function useVoucherExchange() {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
-        console.log("Canceling listing for NFT:", nftMint.toString());
 
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
         const [listingPDA] = await getListingPDA(
@@ -1417,19 +1144,9 @@ export function useVoucherExchange() {
         throw error;
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Listing canceled: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full cancel listing error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to cancel listing: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1438,23 +1155,30 @@ export function useVoucherExchange() {
     mutationKey: ["cancel-voucher-bid", { cluster }],
     mutationFn: async ({
       nftMint,
-      paymentMint,
-      bidderTokenAccount,
+      paymentMint
     }: {
       nftMint: PublicKey;
       paymentMint: PublicKey;
-      bidderTokenAccount: PublicKey;
     }) => {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
-        console.log("Canceling bid for NFT:", nftMint.toString());
+        const paymentMintInfo = await connection.getAccountInfo(paymentMint);
+        const isToken2022 =
+            paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
 
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
         const [bidPDA] = await getBidPDA(
           publicKey,
           nftMint,
           VOUCHER_EXCHANGE_PROGRAM_ID,
+        );
+
+        const bidderTokenAccount = await getAssociatedTokenAddress(
+            paymentMint,
+            publicKey,
+            false,
+            isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
         );
 
         // Using bidder-specific escrow for bid cancellation
@@ -1473,8 +1197,8 @@ export function useVoucherExchange() {
             escrowAccount: escrowBidPDA,
             paymentMint: paymentMint,
             bidderTokenAccount: bidderTokenAccount,
-            exchange: exchangePDA, // Added exchange to update stats
-            tokenProgram: TOKEN_PROGRAM_ID,
+            exchange: exchangePDA,
+            tokenProgram: isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           })
           .transaction();
@@ -1519,19 +1243,9 @@ export function useVoucherExchange() {
         throw error;
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Bid canceled: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full cancel bid error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to cancel bid: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1556,10 +1270,6 @@ export function useVoucherExchange() {
         );
 
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
-        const [nftStatePDA] = await getNftStatePDA(
-          nftMint,
-          VOUCHER_EXCHANGE_PROGRAM_ID,
-        );
         const [bidPDA] = await getBidPDA(
           bidder,
           nftMint,
@@ -1571,7 +1281,6 @@ export function useVoucherExchange() {
           .accounts({
             authority: publicKey,
             exchange: exchangePDA,
-            nftState: nftStatePDA,
             nftMint: nftMint,
             bidder: bidder,
             bid: bidPDA,
@@ -1619,19 +1328,9 @@ export function useVoucherExchange() {
         throw error;
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Bid marked for refund: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full mark for refund error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to mark bid for refund: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1650,8 +1349,6 @@ export function useVoucherExchange() {
       if (!publicKey) throw new Error("Wallet not connected");
 
       try {
-        console.log("Refunding bid for NFT:", nftMint.toString());
-
         const [exchangePDA] = await getExchangePDA(VOUCHER_EXCHANGE_PROGRAM_ID);
         const [bidPDA] = await getBidPDA(
           publicKey,
@@ -1721,19 +1418,9 @@ export function useVoucherExchange() {
         throw error;
       }
     },
-    onSuccess: (signature) => {
-      toast.success(`Bid refunded: ${signature.substring(0, 8)}...`, {
-        duration: 5000,
-        position: "bottom-right",
-      });
-    },
+    onSuccess: (signature) => {},
     onError: (error) => {
       console.error("Full refund bid error:", error);
-      const errorMessage = error.message || "Unknown error";
-      toast.error(`Failed to refund bid: ${errorMessage}`, {
-        duration: 7000,
-        position: "bottom-right",
-      });
     },
   });
 
@@ -1748,9 +1435,6 @@ export function useVoucherExchange() {
     // Individual queries (function factories)
     getListingByOwnerAndMint,
     getBidByBidderAndMint,
-    getNftState,
-    isNftSold,
-    getNftSaleInfo,
 
     // Fetch functions
     fetchActiveListings,
@@ -1760,7 +1444,6 @@ export function useVoucherExchange() {
     fetchBidsByNftMint,
     fetchBidsByBidder,
     fetchBidsRequiringRefund,
-    fetchAllSoldNfts,
 
     // Mutations
     initializeExchange,

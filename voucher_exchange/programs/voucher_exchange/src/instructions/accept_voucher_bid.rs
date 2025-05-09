@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{
     TokenAccount as TokenAccountInterface, Mint as MintInterface, TokenInterface,
     TransferChecked, transfer_checked, CloseAccount, close_account
 };
-use anchor_spl::token::{Token, Mint, TokenAccount}; // Add standard Token and Mint imports
+use anchor_spl::token::{Token, Mint, TokenAccount, transfer}; // Add standard Token and Mint imports
 use anchor_spl::associated_token::AssociatedToken;
 use crate::state::*;
 use crate::errors::*;
@@ -35,15 +35,6 @@ pub struct AcceptVoucherBid<'info> {
     // Changed to regular Mint instead of InterfaceAccount
     #[account(mut)]
     pub nft_mint: Account<'info, Mint>,
-
-    #[account(
-        init_if_needed,
-        payer = owner,
-        space = VoucherState::SIZE,
-        seeds = [VOUCHER_STATE_SEED, nft_mint.key().as_ref()],
-        bump
-    )]
-    pub nft_state: Account<'info, VoucherState>,
 
     #[account(
         mut,
@@ -127,14 +118,14 @@ pub fn handler(
     let payment_token_program = ctx.accounts.token_program.to_account_info();
 
     // Get bid seeds for signing
-    let bid_seeds = &[
-        VOUCHER_BID_SEED,
+    let escrow_seeds = &[
+        ESCROW_SEED,
         bidder_key.as_ref(),
         nft_mint_key.as_ref(),
-        &[bid_bump],
+        &[ctx.accounts.bid.escrow_bump],
     ];
 
-    let bid_signer_seeds = &[&bid_seeds[..]];
+    let escrow_signer_seeds = &[&escrow_seeds[..]];
 
     // 1. Transfer payment from escrow to owner
     transfer_checked(
@@ -144,9 +135,9 @@ pub fn handler(
                 from: ctx.accounts.escrow_payment_account.to_account_info(),
                 mint: ctx.accounts.payment_mint.to_account_info(),
                 to: ctx.accounts.owner_payment_account.to_account_info(),
-                authority: ctx.accounts.bid.to_account_info(),
+                authority: ctx.accounts.escrow_payment_account.to_account_info(),
             },
-            bid_signer_seeds,
+            escrow_signer_seeds,
         ),
         price,
         ctx.accounts.payment_mint.decimals,
@@ -159,9 +150,9 @@ pub fn handler(
             CloseAccount {
                 account: ctx.accounts.escrow_payment_account.to_account_info(),
                 destination: ctx.accounts.bidder.to_account_info(), // Rent goes back to the bidder
-                authority: ctx.accounts.bid.to_account_info(),
+                authority: ctx.accounts.escrow_payment_account.to_account_info(),
             },
-            bid_signer_seeds,
+             escrow_signer_seeds,
         )
     )?;
 
@@ -178,19 +169,17 @@ pub fn handler(
     let nft_token_program = ctx.accounts.token_nft_program.to_account_info();
 
     // 3. Transfer NFT from escrow to bidder
-    transfer_checked(
+    transfer(
         CpiContext::new_with_signer(
             nft_token_program.clone(),
-            TransferChecked {
+            anchor_spl::token::Transfer {
                 from: ctx.accounts.escrow_nft_account.to_account_info(),
-                mint: ctx.accounts.nft_mint.to_account_info(),
                 to: ctx.accounts.bidder_nft_account.to_account_info(),
                 authority: ctx.accounts.listing.to_account_info(),
             },
             listing_signer_seeds,
         ),
         1,
-        ctx.accounts.nft_mint.decimals,
     )?;
 
     // 4. Close the escrow NFT account and send rent back to the owner
@@ -205,13 +194,6 @@ pub fn handler(
             listing_signer_seeds,
         )
     )?;
-
-    // Update NFT state to mark as sold
-    let nft_state = &mut ctx.accounts.nft_state;
-    nft_state.nft_mint = ctx.accounts.nft_mint.key();
-    nft_state.sold = true;
-    nft_state.latest_sale_timestamp = Clock::get()?.unix_timestamp;
-    nft_state.bump = ctx.bumps.nft_state;
 
     // Update exchange statistics
     let exchange = &mut ctx.accounts.exchange;

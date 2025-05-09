@@ -35,19 +35,6 @@ pub struct FulfillVoucherListing<'info> {
     #[account(mut)]
     pub nft_mint: Account<'info, Mint>,
 
-    // Create or update NFT state
-    #[account(
-        init_if_needed,
-        payer = buyer,
-        space = VoucherState::SIZE,
-        seeds = [
-            VOUCHER_STATE_SEED,
-            nft_mint.key().as_ref()
-        ],
-        bump
-    )]
-    pub nft_state: Account<'info, VoucherState>,
-
     #[account(
         mut,
         constraint = escrow_nft_account.mint == nft_mint.key() @ VoucherExchangeError::NotNFTOwner,
@@ -166,13 +153,6 @@ pub fn handler(ctx: Context<FulfillVoucherListing>) -> Result<()> {
             signer_seeds,
         )
     )?;
-
-    // Update NFT state to mark as sold
-    let nft_state = &mut ctx.accounts.nft_state;
-    nft_state.nft_mint = ctx.accounts.nft_mint.key();
-    nft_state.sold = true;
-    nft_state.latest_sale_timestamp = Clock::get()?.unix_timestamp;
-    nft_state.bump = ctx.bumps.nft_state;
 
     // Decrement total listings in exchange
     let exchange = &mut ctx.accounts.exchange;

@@ -3,11 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useVoucherExchange } from "@/service/voucher-exchange-program/useVoucherExchange";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  getAssociatedTokenAddress,
-  TOKEN_2022_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
 import { RefreshCwIcon, ShoppingCartIcon, WalletIcon } from "lucide-react";
 import useFetchRewards from "@/service/rewards/useFetchRewards";
 import MyListingCard from "@/components/new-dashboard/components/MyListingCard";
@@ -71,24 +66,6 @@ const ExchangesPage = () => {
         setActiveListings(filteredListings);
       } catch (err) {
         console.error("Error fetching active listings:", err);
-
-        // Handle Solana JSON RPC errors specifically
-        if (err.message && err.message.includes("Base58DecodeError")) {
-          setError(
-            "There was an issue connecting to the Solana network. The program ID or account address may be invalid.",
-          );
-        } else if (
-          err.message &&
-          err.message.includes("failed to get accounts owned by program")
-        ) {
-          setError(
-            "Failed to fetch program accounts. Please check if the program ID is correct and deployed on this network.",
-          );
-        } else {
-          setError(
-            "Failed to fetch marketplace listings. Please try again later.",
-          );
-        }
       }
     } finally {
       setIsLoadingMarketplace(false);
@@ -116,17 +93,6 @@ const ExchangesPage = () => {
         setMyListings(activeUserListings);
       } catch (err) {
         console.error("Error fetching user listings:", err);
-
-        // Handle Solana JSON RPC errors
-        if (err.message && err.message.includes("Base58DecodeError")) {
-          // Don't show error in UI for this tab, just log
-          console.warn("Base58 decode error when fetching user listings");
-        } else if (
-          err.message &&
-          err.message.includes("failed to get accounts owned by program")
-        ) {
-          console.warn("Failed to fetch program accounts for user listings");
-        }
       }
     } finally {
       setIsLoadingMyListings(false);
@@ -158,15 +124,12 @@ const ExchangesPage = () => {
       const nftMint = listing.data.nft_mint || listing.data.nftMint;
       const paymentMint = listing.data.payment_mint || listing.data.paymentMint;
       const paymentMintInfo = await connection.getAccountInfo(paymentMint);
-      const isToken2022 =
-        paymentMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) ?? true;
 
       // Execute the transaction with updated parameters
       const signature = await fulfillVoucherListing.mutateAsync({
         owner,
         nftMint,
         paymentMint,
-        isToken2022,
       });
 
       // Dismiss loading toast and show success
@@ -182,25 +145,10 @@ const ExchangesPage = () => {
       toast.dismiss(loadingToast);
 
       console.error("Error purchasing voucher:", error);
-
-      // Provide user-friendly error messages
-      if (error.message.includes("InsufficientFunds")) {
-        toast.error("You don't have enough tokens to complete this purchase.");
-      } else if (error.message.includes("ListingNotActive")) {
-        toast.error(
-          "This listing is no longer active. Please refresh the page.",
-        );
-      } else if (error.message.includes("InsufficientNFTAmount")) {
-        toast.error(
-          "There was an issue with the NFT escrow. Please try again later.",
-        );
-      } else {
-        toast.error(`Purchase failed: ${error.message || "Unknown error"}`);
-      }
     }
   };
 
-  const handleCancelListing = async (listing) => {
+  const handleCancelListing = async (listing: any) => {
     if (!publicKey) {
       toast.error("Please connect your wallet to cancel a listing");
       return;
@@ -230,9 +178,6 @@ const ExchangesPage = () => {
       toast.dismiss(loadingToast);
 
       console.error("Error canceling listing:", error);
-      toast.error(
-        `Failed to cancel listing: ${error.message || "Unknown error"}`,
-      );
     }
   };
 
@@ -312,7 +257,7 @@ const ExchangesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeListings.map((listing) => {
+              {activeListings.map((listing: any) => {
                 // Get the NFT mint from the listing
                 const nftMint = listing.data.nft_mint || listing.data.nftMint;
                 const nftMintString = nftMint?.toString();
@@ -360,7 +305,7 @@ const ExchangesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myListings.map((listing) => {
+              {myListings.map((listing: any) => {
                 // Get the NFT mint from the listing
                 const nftMint = listing.data.nft_mint || listing.data.nftMint;
                 const nftMintString = nftMint?.toString();
