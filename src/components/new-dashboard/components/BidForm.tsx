@@ -59,14 +59,14 @@ const BidForm: React.FC<BidFormProps> = ({
             type="number"
             value={bidAmount}
             onChange={(e) => setBidAmount(Number(e.target.value))}
-            min={currentPrice}
+            min={0}
             step="1"
             className="input input-bordered w-full"
             required
           />
 
           <div className="flex justify-between mt-1">
-            <span className="text-xs">Min: {currentPrice} points</span>
+            <span className="text-xs">Min: 0 points</span>
             <span className="text-xs">
               Your balance: {availableBalance.toLocaleString()} points
             </span>
@@ -81,10 +81,7 @@ const BidForm: React.FC<BidFormProps> = ({
           type="submit"
           className="btn btn-primary w-full"
           disabled={
-            isSubmitting ||
-            !publicKey ||
-            isInsufficientBalance ||
-            bidAmount < currentPrice
+            isSubmitting || !publicKey || isInsufficientBalance || bidAmount < 0
           }
         >
           {isSubmitting ? (

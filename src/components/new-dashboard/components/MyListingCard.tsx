@@ -61,7 +61,7 @@ const MyListingCard = ({ listing, metadata, onCancel, isPending }) => {
     return localMetadata.attributes[traitType]?.value;
   };
 
-  const price = getAttribute("price") || Number(listing.data.price) / 10 ** 9;
+  const price = Number(listing.data.price) / 10 ** 9 || getAttribute("price");
   const redeemableStart = getAttribute("redeemable_start")
     ? new Date(getAttribute("redeemable_start") * 1000)
     : new Date();
