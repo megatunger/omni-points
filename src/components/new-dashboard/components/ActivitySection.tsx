@@ -3,14 +3,14 @@ import ActivityItem from "./ActivityItem";
 
 const activities = [
   {
-    description: "Headphones",
-    date: "Mar 18",
-    points: -320,
+    description: "VIETJET_VJ1137_#11453",
+    date: "May 10, 2025",
+    points: -1000,
   },
   {
     description: "Points earned",
     date: "This month",
-    points: 150,
+    points: 1500,
   },
 ];
 

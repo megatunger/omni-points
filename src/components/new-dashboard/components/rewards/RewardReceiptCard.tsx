@@ -50,7 +50,7 @@ const RewardReceiptCard = ({ address, name, metadata }) => {
           {isLoading && <span className="loading loading-spinner mr-2"></span>}
         </button>
         <button onClick={refund} className="btn btn-warning w-full mt-4">
-          Flight canceled? Get refund
+          Booking canceled? Get refund
           <ArrowRightIcon className="ml-2" />
           {isRefunding && (
             <span className="loading loading-spinner mr-2"></span>
