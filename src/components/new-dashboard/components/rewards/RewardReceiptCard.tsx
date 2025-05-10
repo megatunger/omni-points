@@ -4,10 +4,13 @@ import { ArrowRightIcon } from "lucide-react";
 import useDecodeSecretCode from "@/service/rewards/useDecodeSecretCode";
 import useBurnNft from "@/service/rewards/useBurnNft";
 import { DEBUG_UI } from "@/utils/constants";
+import useRefundFlight from "@/service/rewards/useRefundFlight";
 
 const RewardReceiptCard = ({ address, name, metadata }) => {
   const { data, isLoading } = useDecodeSecretCode(address);
   const { mutateAsync, isPending } = useBurnNft(address);
+  const { mutateAsync: refund, isPending: isRefunding } =
+    useRefundFlight(address);
   const code = data?.data?.secretCode;
   const onClick = () => {
     if (name.includes("VIETJET")) {
@@ -45,6 +48,13 @@ const RewardReceiptCard = ({ address, name, metadata }) => {
           Go to Booking page
           <ArrowRightIcon className="ml-2" />
           {isLoading && <span className="loading loading-spinner mr-2"></span>}
+        </button>
+        <button onClick={refund} className="btn btn-warning w-full mt-4">
+          Flight canceled? Get refund
+          <ArrowRightIcon className="ml-2" />
+          {isRefunding && (
+            <span className="loading loading-spinner mr-2"></span>
+          )}
         </button>
         {DEBUG_UI && (
           <button onClick={mutateAsync} className="btn btn-danger w-full mt-12">

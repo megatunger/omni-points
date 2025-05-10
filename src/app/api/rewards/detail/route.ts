@@ -1,4 +1,4 @@
-import { AppKeypair } from "@/utils/constants";
+import { AppKeypair, umi } from "@/utils/constants";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   fetchAllDigitalAssetWithTokenByOwner,
@@ -11,10 +11,6 @@ import { NextResponse } from "next/server";
 import * as process from "node:process";
 
 export async function GET(request: Request) {
-  const umi = createUmi(
-    process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
-  ).use(mplTokenMetadata());
-
   // If params include `?address=...`, use that address
   // Otherwise, use the default address
   const url = new URL(request.url);

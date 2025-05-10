@@ -1,5 +1,5 @@
 import { Metaplex } from "@metaplex-foundation/js";
-import { AppKeypair, connection } from "@/utils/constants";
+import { AppKeypair, connection, umi } from "@/utils/constants";
 import { clusterApiUrl, PublicKey } from "@solana/web3.js";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
@@ -11,10 +11,6 @@ import { NextResponse } from "next/server";
 import * as process from "node:process";
 
 export async function GET(request: Request) {
-  const umi = createUmi(
-    process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
-  ).use(mplTokenMetadata());
-
   // If params include `?address=...`, use that address
   // Otherwise, use the default address
   const url = new URL(request.url);
