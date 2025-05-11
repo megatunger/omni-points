@@ -49,9 +49,9 @@ async function mintNft(nft: string) {
       creators: [{ address: creator.publicKey, verified: true, share: 100 }],
       isCollection: true,
       // @ts-ignore
-      // collection: { key: new PublicKey(VietjetCollection), verified: false },
+      collection: { key: new PublicKey(VietjetCollection), verified: false },
       // @ts-ignore
-      collection: { key: new PublicKey(PhuLongCollection), verified: false },
+      // collection: { key: new PublicKey(PhuLongCollection), verified: false },
     }).sendAndConfirm(umi);
     console.log(`Created NFT: ${mint.publicKey.toString()}`);
   } catch (e) {
@@ -60,8 +60,8 @@ async function mintNft(nft: string) {
 }
 
 async function main() {
-  // await mintNft("vietjet/1");
-  await mintNft("phulong/1");
+  await mintNft("vietjet/1");
+  // await mintNft("phulong/1");
 }
 
 main();

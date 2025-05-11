@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       trait_type: "price",
     }).value;
     // A logic to determine if the flight was canceled can be added here.
-    if (sample([true, false])) {
+    if (false) {
       return NextResponse.json(
         { error: "Your flight was not canceled. You can not get refund" },
         { status: 200 },

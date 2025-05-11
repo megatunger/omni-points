@@ -21,13 +21,13 @@ export const axios = new Axios({
   transformRequest: [(data) => JSON.stringify(data)],
   transformResponse: [(data) => JSON.parse(data)],
   responseType: "json",
-  baseURL: "http://localhost:3000/api",
+  baseURL: "/api",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-export const DEBUG_UI = true;
+export const DEBUG_UI = false;
 
 export const { rpc, sendAndConfirmTransaction } = createSolanaClient({
   urlOrMoniker: "devnet",
